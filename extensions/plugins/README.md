@@ -45,3 +45,4 @@ PLUGIN_META = plugin.meta
 - `open youtube in chrome` → `web_open_chrome` + `https://youtube.com`
 - `search python tutorials` → `web_search_google`
 - `go to github` → `web_go` + `github`
+![Venty CLI Screenshot](screenshot.png)
