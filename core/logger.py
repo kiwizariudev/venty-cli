@@ -36,9 +36,16 @@ def log_session_start() -> None:
         f.write(f"[{datetime.datetime.now():%Y-%m-%d %H:%M:%S}] SESSION START\n")
 
 
-def log_session_end() -> None:
+def log_session_end(num_messages: int = None, session_actions=None) -> None:
     with open(SESSION_PATH, "a", encoding="utf-8") as f:
         f.write(f"[{datetime.datetime.now():%Y-%m-%d %H:%M:%S}] SESSION END\n")
+        if num_messages is not None:
+            f.write(f"Total messages: {num_messages}\n")
+        if session_actions is not None:
+            if isinstance(session_actions, int):
+                f.write(f"Actions performed: {session_actions}\n")
+            else:
+                f.write(f"Actions performed: {len(session_actions)}\n")
 
 
 def read_log_tail(path: str = LOG_PATH, lines: int = 30) -> str:
