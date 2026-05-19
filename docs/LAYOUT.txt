@@ -1,0 +1,119 @@
+VENTY / REFLECT — PROJECT LAYOUT
+=================================
+
+  USER (terminal)
+       |
+       v
+  +----------+
+  |  cli.py  |  main entry — prompt loop, builtins (help, config, …)
+  +----------+
+       |
+       +------------------+------------------+------------------+
+       v                  v                  v                  v
+  +----------+      +-----------+      +-----------+      +-----------+
+  | core/    |      | actions/  |      | ui/       |      | plugins/  |
+  | engine   |      | 200+ ops  |      | colors    |      | optional  |
+  +----------+      +-----------+      +-----------+      +-----------+
+       |                  |
+       |                  +--> os_write_file, os_open_chrome, os_run_python, …
+       v
+  +----------+     HTTPS POST (stream)      +---------------------------+
+  | agent    | --------------------------> | LLM API (Groq / Mistral /  |
+  | prompt   | <-------------------------- | OpenAI / LM Studio local)  |
+  | jsonutil |     JSON response           +---------------------------+
+  | tasks    |           |
+  | executor |           v
+  +----------+     {"action":"...", "args":[...], "message":"..."}
+       |                  |
+       |                  +--> action = "task_plan" ?
+       |                           |
+       |                           v
+       |                    +-------------+
+       |                    | tasks.py    |  multi-step loop
+       |                    +-------------+
+       |                           |
+       v                           v
+  +----------+              execute_action()
+  | executor | ------------------+
+  +----------+                   v
+                          subprocess / files / browser
+
+
+FOLDER MAP
+----------
+
+  reflect/
+  |
+  |-- cli.py              <-- run this (or scripts/run.bat)
+  |-- setup.py            <-- configure API + build
+  |
+  |-- data/               ALL mutable state
+  |     config/           settings, API keys  [gitignored]
+  |     sandbox/          default working_dir
+  |     runtime/          temp / compile scratch
+  |     cache/            action stats
+  |     memory/           history + notes
+  |     logs/             venty.log, errors.log
+  |     scheduler/        jobs.json
+  |
+  |-- extensions/
+  |     plugins/          custom ACTIONS/*.py (auto-loaded)
+  |     modules/          optional helpers
+  |     api/              (reserved)
+  |     bridge/           (reserved)
+  |
+  |-- core/               brain (agent, executor, tasks, …)
+  |-- actions/            hands
+  |-- ui/                 terminal styling
+  |-- scripts/            run.bat, run.ps1
+  |-- docs/               LAYOUT.txt, FOLDERS.txt
+  |-- assets/             banner.txt
+
+  See docs/FOLDERS.txt for full organization.
+
+
+DATA FLOW (one message)
+-----------------------
+
+  you > "make hello.py with hello world"
+            |
+            v
+      [build_system_prompt + history]
+            |
+            v
+      POST api.../chat/completions  (Bearer API_KEY)
+            |
+            v
+      raw JSON string
+            |
+            v
+      extract_first_json()
+            |
+            +-- action: "task_plan"
+            |       steps[0]: os_write_file ["hello.py", "print('hello world')"]
+            |       steps[1]: (optional) os_run_python
+            |
+            v
+      run_task_plan() --> executor --> data/sandbox/hello.py
+
+
+BUILD FLOW
+----------
+
+  python setup.py  -->  menu
+       |
+       +-- [4] Build
+              |
+              +-- pip install -r requirements.txt
+              +-- ensure_dirs()  (sandbox, runtime, cache, …)
+              +-- default config/settings.json if missing
+              |
+       python cli.py  -->  Venty running
+
+
+PACKAGED EXE (optional)
+-----------------------
+
+  pip install pyinstaller
+  pyinstaller cli.spec
+       --> dist/cli.exe

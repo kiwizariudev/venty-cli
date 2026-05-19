@@ -1,0 +1,51 @@
+VENTY — FOLDER ORGANIZATION
+===========================
+
+SOURCE (read-only in git — edit to change behavior)
+-------------------------------------------------
+  core/           Engine: LLM, JSON, executor, memory, scheduler
+  actions/        200+ system actions
+  ui/             Terminal UI helpers
+  cli.py          Main entry point
+  setup.py        Setup wizard + build
+
+DATA (mutable — gitignored except .gitkeep)
+-------------------------------------------
+  data/
+    config/       settings.json, apis.json, themes, aliases
+    sandbox/      AI workspace (default working_dir)
+    runtime/      temp builds / compile output
+    cache/        action statistics
+    memory/       chat history + notes
+    logs/         venty.log, errors.log
+    scheduler/    jobs.json
+
+EXTENSIONS (optional add-ons)
+-----------------------------
+  extensions/
+    plugins/      *.py with ACTIONS dict (auto-loaded)
+    modules/      helper .py files
+    api/          (reserved) HTTP API
+    bridge/       (reserved) Discord / webhooks
+
+DOCS & ASSETS
+-------------
+  docs/           LAYOUT.txt (flow), FOLDERS.txt (this file)
+  assets/         banner.txt
+  scripts/        run.bat, run.ps1, setup.bat
+
+BUILD OUTPUT
+------------
+  build/          PyInstaller intermediate
+  dist/           cli.exe
+  env/            local venv (optional)
+
+REMOVED / LEGACY (do not use)
+-----------------------------
+  config/         → migrated to data/config/
+  memory/         → data/memory/
+  logs/           → data/logs/
+  plugins/        → extensions/plugins/
+  cli/            → use scripts/ instead
+  modules/        → extensions/modules/
+  engine/         → removed (use core/)

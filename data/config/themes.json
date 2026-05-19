@@ -1,0 +1,38 @@
+{
+  "default": {
+    "primary":   "96",
+    "secondary": "95",
+    "success":   "92",
+    "error":     "91",
+    "warning":   "93",
+    "info":      "90",
+    "user":      "94"
+  },
+  "dark": {
+    "primary":   "36",
+    "secondary": "35",
+    "success":   "32",
+    "error":     "31",
+    "warning":   "33",
+    "info":      "90",
+    "user":      "34"
+  },
+  "matrix": {
+    "primary":   "92",
+    "secondary": "32",
+    "success":   "92",
+    "error":     "91",
+    "warning":   "93",
+    "info":      "32",
+    "user":      "92"
+  },
+  "ocean": {
+    "primary":   "94",
+    "secondary": "96",
+    "success":   "92",
+    "error":     "91",
+    "warning":   "93",
+    "info":      "90",
+    "user":      "95"
+  }
+}

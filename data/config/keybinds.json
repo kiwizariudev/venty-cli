@@ -1,0 +1,6 @@
+{
+  "clear": "ctrl+l",
+  "history": "ctrl+h",
+  "help": "ctrl+?",
+  "exit": "ctrl+c"
+}

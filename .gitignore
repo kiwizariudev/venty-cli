@@ -1,0 +1,43 @@
+# secrets
+data/config/settings.json
+data/config/apis.json
+
+# legacy paths (after migration)
+config/settings.json
+config/apis.json
+
+# runtime data
+data/logs/
+data/cache/
+data/memory/history.json
+data/memory/notes.json
+
+data/sandbox/*
+!data/sandbox/.gitkeep
+
+data/runtime/*
+!data/runtime/.gitkeep
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+.env
+env/
+venv/
+.venv/
+
+# build
+build/
+dist/
+*.spec.bak
+
+# os / ide
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.vs/
+
+# junk at root
+test.c
