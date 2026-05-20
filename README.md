@@ -48,7 +48,7 @@ You type in a terminal. Venty sends your message to an LLM, gets back a JSON act
 ## Quick start
 
 ```powershell
-git clone <repo> && cd reflect
+git clone <repo> && cd venty-cli
 python -m venv env && .\env\Scripts\Activate.ps1
 python setup.py        # menu → 4 Build & install
 python setup.py        # menu → 1 Setup API provider
@@ -60,7 +60,7 @@ python cli.py
 ## Project layout
 
 ```
-reflect/
+venty-cli/
 ├── cli.py                  main entry point
 ├── setup.py                setup wizard (API keys, models, build)
 ├── config.py               rich config management UI
