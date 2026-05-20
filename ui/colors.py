@@ -89,15 +89,14 @@ def print_action(action: str, args: list) -> None:
     print(f"{_THEME['warning']}  * action: {BOLD}{action}{RESET}{_THEME['warning']} -> [{args_str}]{RESET}")
 
 
-def print_step(current: int, total: int, title: str) -> None:
-    """Print a progress step for multi-step plans."""
-    if _HAS_RICH:
-        _console.print(f"[bold cyan][{current}/{total}][/bold cyan] [white]{title}[/white]")
-    else:
-        bar_width = 20
-        filled = int(bar_width * current / total)
-        bar = "█" * filled + "░" * (bar_width - filled)
-        print(f"{_THEME['info']}  [{bar}] {current}/{total} : {BOLD}{title}{RESET}")
+def print_step(current: int, total: int, action: str, args: list = None, label: str = "") -> None:
+    """Print a progress step for multi-step task plans."""
+    args_str = ", ".join(str(a) for a in args) if args else ""
+    tag = f" — {label}" if label else ""
+    bar_width = 18
+    filled = int(bar_width * current / total)
+    bar = "█" * filled + "░" * (bar_width - filled)
+    print(f"{_THEME['secondary']}  [{bar}] {current}/{total}  {BOLD}{action}{RESET}{_THEME['secondary']}  {args_str}{tag}{RESET}")
 
 
 def print_loop_step(i: int, total: int, action: str, args: list) -> None:
@@ -111,17 +110,27 @@ def print_separator() -> None:
 
 def print_banner(provider: str = "", model: str = "not configured") -> None:
     c = vc()
-    # Integrated Side-by-Side Banner with Mascot
-    banner_lines = [
-        f"  {c} .~~~.     {c}{BOLD} ██╗   ██╗███████╗███╗   ██╗████████╗██╗   ██╗",
-        f"  {c}(o . o)    {c}{BOLD} ██║   ██║██╔════╝████╗  ██║╚══██╔══╝╚██╗ ██╔╝",
-        f"  {c} ) v (     {c}{BOLD} ██║   ██║█████╗  ██╔██╗ ██║   ██║    ╚████╔╝",
-        f"  {c}~~ ~ ~~    {c}{BOLD} ╚██╗ ██╔╝██╔══╝  ██║╚██╗██║   ██║     ╚██╔╝ ",
-        f"  {c}~ ~ ~ ~ ~  {c}{BOLD}  ╚████╔╝ ███████╗██║ ╚████║   ██║      ██║  ",
-        f"  {c}           {c}{BOLD}   ╚═══╝  ╚══════╝╚═╝  ╚═══╝   ╚═╝      ╚═╝  "
+    name = model if model and model != "not configured" else "not configured"
+    prov = provider if provider else "Venty"
+    pet = [
+        f"  {c} /\\_/\\  ",
+        f"  {c}( o.o ) ",
+        f"  {c} > ^ <  ",
     ]
-    
-    print("\n" + "\n".join(banner_lines))
-    print(f"{RESET}{_THEME['info']}                        Welcome to the new Venty CLI UX! /help to learn more.")
-    print(f"{RESET}{_THEME['info']}                             AI Desktop Assistant  •  {provider if provider else 'Venty'}  •  {model}")
-    print_separator()
+    logo = [
+        f"{c}{BOLD} ██╗   ██╗███████╗███╗   ██╗████████╗██╗   ██╗",
+        f"{c}{BOLD} ██║   ██║██╔════╝████╗  ██║╚══██╔══╝╚██╗ ██╔╝",
+        f"{c}{BOLD} ██║   ██║█████╗  ██╔██╗ ██║   ██║    ╚████╔╝ ",
+        f"{c}{BOLD} ╚██╗ ██╔╝██╔══╝  ██║╚██╗██║   ██║     ╚██╔╝  ",
+        f"{c}{BOLD}  ╚████╔╝ ███████╗██║ ╚████║   ██║      ██║   ",
+        f"{c}{BOLD}   ╚═══╝  ╚══════╝╚═╝  ╚═══╝   ╚═╝      ╚═╝  ",
+    ]
+    print()
+    for i, line in enumerate(logo):
+        side = pet[i] if i < len(pet) else "          "
+        print(f"{side}{line}{RESET}")
+    print(f"\n{_THEME['info']}  ┌──────────────────────────────────────────────────┐")
+    print(f"  │  AI Desktop Assistant                            │")
+    print(f"  │  Provider : {prov:<38}│")
+    print(f"  │  Model    : {name:<38}│")
+    print(f"  └──────────────────────────────────────────────────┘{RESET}")

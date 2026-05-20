@@ -1,116 +1,61 @@
-from __future__ import annotations
-import importlib.util
-import json
+"""
+core/plugins.py — plugin loader for extensions/plugins/*.py
+Each plugin file must expose:
+  PLUGIN_NAME    = "My Plugin"
+  PLUGIN_VERSION = "1.0.0"
+  ACTIONS        = { "action_name": {"description": "...", "execute": lambda a: ...} }
+"""
 import os
-import sys
-from typing import Any
-from core.paths import PLUGINS_DIR, CACHE_DIR
+import importlib.util
 
-_REGISTRY: list[dict] = []
-_ERRORS: list[dict] = []
+BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PLUGINS_DIR = os.path.join(BASE_DIR, "extensions", "plugins")
+
+_registry: list[dict] = []
+_errors:   list[str]  = []
+
+
+def load_all_plugins(actions: dict) -> tuple[dict, list]:
+    """Load all .py plugins from PLUGINS_DIR into actions dict. Returns (actions, errors)."""
+    global _registry, _errors
+    _registry.clear()
+    _errors.clear()
+
+    if not os.path.isdir(PLUGINS_DIR):
+        return actions, []
+
+    for fname in sorted(os.listdir(PLUGINS_DIR)):
+        if not fname.endswith(".py") or fname.startswith("_"):
+            continue
+        path = os.path.join(PLUGINS_DIR, fname)
+        try:
+            spec   = importlib.util.spec_from_file_location(f"plugins.{fname[:-3]}", path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            plugin_actions = getattr(module, "ACTIONS", {})
+            name    = getattr(module, "PLUGIN_NAME",    fname[:-3])
+            version = getattr(module, "PLUGIN_VERSION", "1.0.0")
+            actions.update(plugin_actions)
+            _registry.append({"name": name, "version": version,
+                               "file": fname, "actions": list(plugin_actions.keys())})
+        except Exception as e:
+            _errors.append(f"{fname}: {e}")
+
+    return actions, _errors
+
 
 def get_registry() -> list[dict]:
-    return list(_REGISTRY)
+    return _registry
 
-def get_load_errors() -> list[dict]:
-    return list(_ERRORS)
 
-def _validate_actions(actions: Any, source: str) -> dict | None:
-    if not isinstance(actions, dict) or not actions:
-        return None
-    clean = {}
-    for name, spec in actions.items():
-        if not isinstance(name, str) or not name.replace("_", "").isalnum():
-            continue
-        if not isinstance(spec, dict):
-            continue
-        desc = spec.get("description", "")
-        exe = spec.get("execute")
-        if not callable(exe):
-            continue
-        clean[name] = {
-            "description": str(desc),
-            "execute": exe,
-            "plugin": spec.get("plugin", source),
-        }
-    return clean or None
+def get_load_errors() -> list[str]:
+    return _errors
 
-def _load_module(path: str, module_name: str):
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"cannot load {path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
 
-def _load_file(path: str, plugin_id: str) -> tuple[dict, dict | None]:
-    mod = _load_module(path, f"venty_plugin.{plugin_id}")
-    actions = _validate_actions(getattr(mod, "ACTIONS", None), plugin_id)
-    if not actions:
-        raise ValueError("no valid ACTIONS dict")
-
-    meta = getattr(mod, "PLUGIN_META", None) or getattr(mod, "PLUGIN", None) or {}
-    if not isinstance(meta, dict):
-        meta = {}
-    info = {
-        "id": meta.get("id", plugin_id),
-        "name": meta.get("name", plugin_id),
-        "version": meta.get("version", "1.0.0"),
-        "description": meta.get("description", ""),
-        "author": meta.get("author", ""),
-        "path": path,
-        "actions": list(actions.keys()),
-        "enabled": True,
-    }
-    for k, v in actions.items():
-        v["plugin"] = info["id"]
-    return actions, info
-
-def _discover_files(plugins_dir: str) -> list[tuple[str, str]]:
-    found: list[tuple[str, str]] = []
-    if not os.path.isdir(plugins_dir):
-        return found
-
-    skip = {"_sdk.py", "_template.py", "__init__.py"}
-
-    for fname in sorted(os.listdir(plugins_dir)):
-        if fname.startswith("_") or fname in skip:
-            continue
-        full = os.path.join(plugins_dir, fname)
-        if fname.endswith(".py") and os.path.isfile(full):
-            found.append((full, fname[:-3]))
-        elif os.path.isdir(full):
-            for candidate in ("plugin.py", "__init__.py"):
-                p = os.path.join(full, candidate)
-                if os.path.isfile(p):
-                    found.append((p, os.path.basename(full)))
-                    break
-    return found
-
-def load_all_plugins(plugins_dir: str = PLUGINS_DIR, disabled: list[str] | None = None) -> tuple[dict, list[dict]]:
-    global _REGISTRY, _ERRORS
-    _REGISTRY = []
-    _ERRORS = []
-    all_actions = {}
-    disabled = disabled or []
-
-    for path, pid in _discover_files(plugins_dir):
-        if pid in disabled or f"{pid}.py" in disabled:
-            continue
-        try:
-            actions, info = _load_file(path, pid)
-            all_actions.update(actions)
-            _REGISTRY.append(info)
-        except Exception as e:
-            _ERRORS.append({"id": pid, "path": path, "error": str(e)})
-
-    return all_actions, _REGISTRY
-
-def format_plugins_for_prompt(registry: list[dict]) -> str:
-    if not registry:
+def format_plugins_for_prompt(actions: dict) -> str:
+    if not _registry:
         return ""
-    lines = ["PLUGINS (additional actions available):"]
-    for p in registry:
-        lines.append(f"  - {p['name']} v{p['version']} ({p['id']}): {p['description']}")
+    lines = ["PLUGINS:"]
+    for p in _registry:
+        lines.append(f"  {p['name']} v{p['version']}: {', '.join(p['actions'])}")
     return "\n".join(lines)

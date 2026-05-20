@@ -388,12 +388,13 @@ ACTIONS.update({
 def reload_plugins():
     global _PLUGIN_REGISTRY
     if _HAS_CORE:
-        plugin_actions, _PLUGIN_REGISTRY = load_all_plugins(PLUGINS_DIR)
-        to_remove = [k for k, v in ACTIONS.items() if v.get("plugin")]
-        for k in to_remove:
-            del ACTIONS[k]
-        ACTIONS.update(plugin_actions)
-        return len(plugin_actions)
+        updated, errors = load_all_plugins(ACTIONS)
+        ACTIONS.update(updated)
+        _PLUGIN_REGISTRY = get_registry()
+        if errors:
+            for e in errors:
+                logger.error(f"Plugin error: {e}")
+        return len(_PLUGIN_REGISTRY)
     return 0
 
 _PLUGIN_REGISTRY = []
@@ -423,14 +424,15 @@ Always use absolute paths based on working_dir. Never create files outside worki
     memory_section = f"\n{memory_block}\n" if memory_block else ""
 
     rules = f"""Respond ONLY with a valid JSON object:
-{{"action": "action_name", "args": ["arg1", "arg2"], "message": "Short reply"}}
+{{"action": "action_name", "args": ["arg1", "arg2"], "message": "Short reply", "suggestions": ["follow-up 1", "follow-up 2"]}}
 
 For MULTI-STEP tasks, respond with a task plan:
-{{"action": "task_plan", "steps": [{{"action": "os_write_file", "args": ["file.py", "content"]}}, {{"action": "os_run_python", "args": ["file.py"]}}], "message": "I'll create and run the file"}}
+{{"action": "task_plan", "steps": [{{"action": "os_write_file", "args": ["file.py", "content"]}}, {{"action": "os_run_python", "args": ["file.py"]}}], "message": "I'll create and run the file", "suggestions": ["run it again", "add error handling"]}}
 
 RULES:
 - action must be one of the listed action names
 - args are plain strings only
+- suggestions: 2-3 short follow-up prompts the user might want to say next (optional but helpful)
 - Respond in same language as user
 - NEVER output anything outside the JSON
 - NEVER wrap JSON in markdown blocks
@@ -476,7 +478,9 @@ def _ask_streaming(messages, api_key, model, url):
         "max_tokens":  CONFIG.get("max_tokens",  700),
         "stream":      True,
     }
-    full = ""
+    full    = ""
+    spinner = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"]
+    spin_i  = 0
     try:
         with requests.post(url, headers=headers, json=payload, stream=True, timeout=CONFIG.get("timeout", 60)) as resp:
             resp.raise_for_status()
@@ -490,9 +494,28 @@ def _ask_streaming(messages, api_key, model, url):
                         chunk = json.loads(data)
                         delta = chunk["choices"][0].get("delta", {})
                         token = delta.get("content", "")
-                        if token: full += token
+                        if token:
+                            full += token
+                            print(f"\r{Colors.GRAY}  {spinner[spin_i % len(spinner)]} receiving...{Colors.RESET}", end="", flush=True)
+                            spin_i += 1
                     except: pass
-    except: return None
+    except requests.exceptions.HTTPError as e:
+        status = e.response.status_code if e.response is not None else 0
+        print(f"\r{' ' * 25}\r", end="")
+        if status == 429:
+            print_error(f"rate limit (429) — wait or switch model in setup.py")
+            logger.error(f"429: {e}")
+        elif status == 401:
+            print_error("invalid API key (401) — run setup.py")
+            logger.error(f"401: {e}")
+        else:
+            print_error(f"API error {status}")
+            logger.error(f"HTTP {status}: {e}")
+        return None
+    except Exception as e:
+        print(f"\r{' ' * 25}\r", end="")
+        logger.error(f"Streaming error: {e}")
+        return None
     return full.strip()
 
 def _ask_standard(messages, api_key, model, url):
@@ -524,6 +547,7 @@ def ask_venty(user_input, conversation_history):
             raw = _ask_streaming(messages, api_key, model, url)
         else:
             raw = _ask_standard(messages, api_key, model, url)
+        print(f"\r{' ' * 25}\r", end="", flush=True)  # clear thinking line
         if raw is None: return None
         last_raw = raw
         if _extract_first_json(raw) is not None:
@@ -774,15 +798,22 @@ def cmd_clear_cache():
     print_success("cache cleared")
 
 def cmd_plugins():
-    print(f"\n{Colors.YELLOW}{Colors.BOLD}  plugins{Colors.RESET}")
+    registry = get_registry() if _HAS_CORE else _PLUGIN_REGISTRY
+    print(f"\n{Colors.YELLOW}{Colors.BOLD}  plugins ({len(registry)} loaded){Colors.RESET}")
     print_separator()
-    if not _PLUGIN_REGISTRY:
+    if not registry:
         print_info("no plugins loaded")
+        print_info(f"drop .py files in: extensions/plugins/")
     else:
-        for p in _PLUGIN_REGISTRY:
-            print(f"  {Colors.CYAN}{Colors.BOLD}{p['name']}{Colors.RESET} {Colors.GRAY}v{p['version']}{Colors.RESET}")
+        for p in registry:
             acts = p.get("actions", [])
-            print(f"    {Colors.GREEN}{len(acts)} actions:{Colors.RESET} {', '.join(acts[:6])}")
+            print(f"  {Colors.CYAN}{Colors.BOLD}{p['name']}{Colors.RESET} {Colors.GRAY}v{p['version']}  •  {p.get('file','')}{Colors.RESET}")
+            print(f"    {Colors.GREEN}{len(acts)} action{'s' if len(acts)!=1 else ''}:{Colors.RESET} {Colors.GRAY}{', '.join(acts)}{Colors.RESET}")
+    errors = get_load_errors() if _HAS_CORE else []
+    if errors:
+        print()
+        for e in errors:
+            print(f"  {Colors.RED}  x {e}{Colors.RESET}")
     print_separator()
 
 def cmd_help():
@@ -821,11 +852,13 @@ def cmd_help():
     print_separator()
 
 def show_suggestions(suggestions):
-    if not suggestions: return None
-    print(f"\n  {Colors.YELLOW}Suggestions:{Colors.RESET}")
-    for i, s in enumerate(suggestions, 1): print(f"  {Colors.CYAN}{i}. {Colors.RESET}{s}")
-    print(f"\n  {Colors.GRAY}(Type number to select or just type your next message){Colors.RESET}")
-    return suggestions
+    if not suggestions: return []
+    print(f"\n{_c('info')}  ╭─ suggestions ──────────────────────────────────────{Colors.RESET}")
+    for i, s in enumerate(suggestions, 1):
+        print(f"{_c('secondary')}  │  {Colors.BOLD}{i}.{Colors.RESET} {_c('info')}{s}{Colors.RESET}")
+    print(f"{_c('info')}  ╰────────────────────────────────────────────────────{Colors.RESET}")
+    print(f"{Colors.GRAY}     type a number to select, or just keep typing{Colors.RESET}")
+    return list(suggestions)
 
 def main():
     if os.name == "nt":

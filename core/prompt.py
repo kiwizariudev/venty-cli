@@ -64,13 +64,13 @@ Format: {{"action": "...", "args": [...], "message": "...", "suggestions": ["opt
 
 You MUST reply with ONLY a JSON object. No markdown, no extra text.
 
-Format: {{"action": "action_name", "args": ["arg1"], "message": "reply"}}
+Format: {{"action": "action_name", "args": ["arg1"], "message": "reply", "suggestions": ["next step 1", "next step 2"]}}
 
 {multi_step}
 
 Available actions: {action_names}
 
-Rules: args are plain strings; use task_plan for multi-step; ONLY output JSON."""
+Rules: args are plain strings; use task_plan for multi-step; include 2 suggestions; ONLY output JSON."""
 
     return f"""You are Venty, a smart AI assistant that controls a Windows computer.
 

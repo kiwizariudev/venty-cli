@@ -1,68 +1,39 @@
-from __future__ import annotations
-from typing import Any, Callable
+"""
+core/plugin_sdk.py — helpers for writing Venty plugins.
 
-def result(text: str):
-    return type("R", (), {"stdout": str(text)})()
+Usage in a plugin file:
+    from core.plugin_sdk import Plugin, ok, fail, result
 
-def ok(text: str):
-    return result(text)
+    class MyPlugin(Plugin):
+        NAME    = "My Plugin"
+        VERSION = "1.0.0"
 
-def fail(text: str):
-    return result(f"Error: {text}")
+    def ok(msg):   return type("R", (), {"stdout": str(msg)})()
+    def fail(msg): raise RuntimeError(msg)
+"""
+
+
+def ok(msg: str = "done"):
+    """Return a stdout-compatible result object."""
+    return type("R", (), {"stdout": str(msg)})()
+
+
+def fail(msg: str):
+    """Raise a RuntimeError to signal action failure."""
+    raise RuntimeError(msg)
+
+
+def result(value):
+    """Wrap any value as a stdout result."""
+    return type("R", (), {"stdout": str(value)})()
+
 
 class Plugin:
-    def __init__(
-        self,
-        id: str,
-        name: str,
-        version: str = "1.0.0",
-        description: str = "",
-        author: str = "",
-    ):
-        self.id = id
-        self.name = name
-        self.version = version
-        self.description = description
-        self.author = author
-        self._actions: dict[str, dict] = {}
+    """Base class for structured plugins (optional — dict ACTIONS also works)."""
+    NAME    = "Unnamed Plugin"
+    VERSION = "1.0.0"
+    ACTIONS: dict = {}
 
-    @property
-    def meta(self) -> dict:
-        return {
-            "id": self.id,
-            "name": self.name,
-            "version": self.version,
-            "description": self.description,
-            "author": self.author,
-            "actions": list(self._actions.keys()),
-        }
-
-    @property
-    def actions(self) -> dict:
-        return dict(self._actions)
-
-    def action(self, name: str, description: str):
-        def decorator(fn: Callable[[list], Any]):
-            def execute(args: list):
-                try:
-                    out = fn(args or [])
-                    if out is None:
-                        return ok("done")
-                    if hasattr(out, "stdout"):
-                        return out
-                    return ok(out)
-                except IndexError:
-                    return fail(f"{name} missing required arguments")
-                except Exception as e:
-                    return fail(str(e))
-
-            self._actions[name] = {
-                "description": description,
-                "execute": execute,
-                "plugin": self.id,
-            }
-            return fn
-        return decorator
-
-    def register(self, name: str, description: str, fn: Callable[[list], Any]):
-        self.action(name, description)(fn)
+    @classmethod
+    def register(cls) -> dict:
+        return cls.ACTIONS

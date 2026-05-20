@@ -1,48 +1,35 @@
-import json
+"""
+core/jsonutil.py — robust JSON extraction from LLM responses.
+"""
 import re
+import json
+
 
 def extract_first_json(text: str) -> dict | None:
-    if not text or not text.strip():
+    """
+    Extract the first valid JSON object from a response that may contain
+    markdown fences, extra text, or multiple JSON blocks.
+    """
+    if not text:
         return None
-
     clean = re.sub(r"```json|```", "", text).strip()
-
+    # try whole string
     try:
-        obj = json.loads(clean)
-        return obj if isinstance(obj, dict) else None
+        return json.loads(clean)
     except json.JSONDecodeError:
         pass
-
-    start = clean.find("{")
-    while start != -1:
-        depth = 0
-        in_string = False
-        escape = False
-        for i in range(start, len(clean)):
-            ch = clean[i]
-            if escape:
-                escape = False
-                continue
-            if ch == "\\" and in_string:
-                escape = True
-                continue
-            if ch == '"':
-                in_string = not in_string
-                continue
-            if in_string:
-                continue
-            if ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-                if depth == 0:
-                    candidate = clean[start : i + 1]
-                    try:
-                        obj = json.loads(candidate)
-                        if isinstance(obj, dict):
-                            return obj
-                    except json.JSONDecodeError:
-                        break
-        start = clean.find("{", start + 1)
-
+    # find first {...} block (greedy from outermost brace)
+    depth, start = 0, -1
+    for i, ch in enumerate(clean):
+        if ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0 and start != -1:
+                try:
+                    return json.loads(clean[start:i + 1])
+                except json.JSONDecodeError:
+                    start = -1
     return None
