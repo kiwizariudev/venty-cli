@@ -291,3 +291,7 @@ Logs: `data/logs/venty.log` · `data/logs/errors.log`
 ## License
 
 MIT
+
+---
+
+![Venty CLI Screenshot](screenshot.png)
