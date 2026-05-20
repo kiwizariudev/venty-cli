@@ -1,10 +1,6 @@
-"""
-core/logger.py — centralised logging
-"""
 import os
 import logging
 import datetime
-
 from core.paths import LOGS_DIR, LOG_PATH, ERROR_PATH, SESSION_PATH
 
 os.makedirs(LOGS_DIR, exist_ok=True)
@@ -26,15 +22,12 @@ if not _logger.handlers:
     _logger.addHandler(_fh)
     _logger.addHandler(_eh)
 
-
 def get_logger() -> logging.Logger:
     return _logger
-
 
 def log_session_start() -> None:
     with open(SESSION_PATH, "a", encoding="utf-8") as f:
         f.write(f"[{datetime.datetime.now():%Y-%m-%d %H:%M:%S}] SESSION START\n")
-
 
 def log_session_end(num_messages: int = None, session_actions=None) -> None:
     with open(SESSION_PATH, "a", encoding="utf-8") as f:
@@ -47,7 +40,6 @@ def log_session_end(num_messages: int = None, session_actions=None) -> None:
             else:
                 f.write(f"Actions performed: {len(session_actions)}\n")
 
-
 def read_log_tail(path: str = LOG_PATH, lines: int = 30) -> str:
     if not os.path.exists(path):
         return ""
@@ -57,7 +49,6 @@ def read_log_tail(path: str = LOG_PATH, lines: int = 30) -> str:
         return "".join(all_lines[-lines:])
     except Exception:
         return ""
-
 
 def clear_logs() -> str:
     for p in (LOG_PATH, ERROR_PATH):

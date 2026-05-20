@@ -1,9 +1,5 @@
-"""
-core/config.py — configuration loader, saver, and live reload
-"""
 import os
 import json
-
 from core.paths import (
     CONFIG_PATH,
     APIS_PATH,
@@ -69,7 +65,6 @@ DEFAULT_THEMES = {
     },
 }
 
-
 def load_config() -> dict:
     cfg = DEFAULT_CONFIG.copy()
     if os.path.exists(CONFIG_PATH):
@@ -81,7 +76,6 @@ def load_config() -> dict:
             pass
     return cfg
 
-
 def save_config(cfg: dict) -> None:
     os.makedirs(CONFIG_DIR, exist_ok=True)
     try:
@@ -89,7 +83,6 @@ def save_config(cfg: dict) -> None:
             json.dump(cfg, f, indent=2)
     except Exception:
         pass
-
 
 def load_apis() -> list:
     if not os.path.exists(APIS_PATH):
@@ -100,37 +93,28 @@ def load_apis() -> list:
     except Exception:
         return []
 
+def save_apis(apis: list) -> None:
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    try:
+        with open(APIS_PATH, "w", encoding="utf-8") as f:
+            json.dump(apis, f, indent=2)
+    except Exception:
+        pass
 
 def load_keybinds() -> dict:
     if not os.path.exists(KEYBINDS_PATH):
-        _write_defaults(KEYBINDS_PATH, DEFAULT_KEYBINDS)
         return DEFAULT_KEYBINDS.copy()
     try:
         with open(KEYBINDS_PATH, "r", encoding="utf-8") as f:
-            kb = json.load(f)
-        for k, v in DEFAULT_KEYBINDS.items():
-            if k not in kb:
-                kb[k] = v
-        return kb
+            return json.load(f)
     except Exception:
         return DEFAULT_KEYBINDS.copy()
 
-
 def load_themes() -> dict:
     if not os.path.exists(THEMES_PATH):
-        _write_defaults(THEMES_PATH, DEFAULT_THEMES)
         return DEFAULT_THEMES.copy()
     try:
         with open(THEMES_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return DEFAULT_THEMES.copy()
-
-
-def _write_defaults(path: str, data: dict) -> None:
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
-    except Exception:
-        pass

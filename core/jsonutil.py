@@ -1,12 +1,7 @@
-"""
-core/jsonutil.py — robust JSON extraction from LLM responses (nested objects supported).
-"""
 import json
 import re
 
-
 def extract_first_json(text: str) -> dict | None:
-    """Extract the first valid JSON object, including nested task_plan steps."""
     if not text or not text.strip():
         return None
 

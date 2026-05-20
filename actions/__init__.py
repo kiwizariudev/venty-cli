@@ -20,6 +20,7 @@ from actions.encode    import ACTIONS as _ENCODE
 from actions.web       import ACTIONS as _WEB
 from actions.browser   import ACTIONS as _BROWSER
 from actions.control   import ACTIONS as _CONTROL
+from actions.utils     import ACTIONS as _UTILS
 
 ACTIONS: dict = {}
 ACTIONS.update(_FILES)
@@ -36,5 +37,6 @@ ACTIONS.update(_ENCODE)
 ACTIONS.update(_WEB)
 ACTIONS.update(_BROWSER)
 ACTIONS.update(_CONTROL)
+ACTIONS.update(_UTILS)
 
 # Plugins are loaded by cli.py via core.plugins (after ACTIONS is imported).

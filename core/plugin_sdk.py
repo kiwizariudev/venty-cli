@@ -1,42 +1,14 @@
-"""
-core/plugin_sdk.py — helpers for writing Venty plugins.
-
-Example:
-    from core.plugin_sdk import Plugin, result
-
-    plugin = Plugin(
-        id="my_plugin",
-        name="My Plugin",
-        version="1.0.0",
-        description="Does cool things",
-        author="You",
-    )
-
-    @plugin.action("web_open_chrome", "Open URL in Chrome, args = [url]")
-    def open_chrome(args):
-        from actions.browser import open_url
-        return open_url(args[0], "chrome")
-
-    ACTIONS = plugin.actions
-    PLUGIN_META = plugin.meta
-"""
 from __future__ import annotations
-
 from typing import Any, Callable
 
-
 def result(text: str):
-    """Return value expected by the action executor."""
     return type("R", (), {"stdout": str(text)})()
-
 
 def ok(text: str):
     return result(text)
 
-
 def fail(text: str):
     return result(f"Error: {text}")
-
 
 class Plugin:
     def __init__(
@@ -70,8 +42,6 @@ class Plugin:
         return dict(self._actions)
 
     def action(self, name: str, description: str):
-        """Decorator to register an action: fn(args: list) -> result object."""
-
         def decorator(fn: Callable[[list], Any]):
             def execute(args: list):
                 try:
@@ -92,10 +62,7 @@ class Plugin:
                 "plugin": self.id,
             }
             return fn
-
         return decorator
 
     def register(self, name: str, description: str, fn: Callable[[list], Any]):
-        """Register without decorator."""
         self.action(name, description)(fn)
-        return fn

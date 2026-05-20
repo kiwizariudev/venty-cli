@@ -1,10 +1,5 @@
-"""
-core/prompt.py — builds the system prompt dynamically from actions + context
-"""
 import json
-
 from core.context import get_context
-
 
 def build_system_prompt(actions: dict, cfg: dict) -> str:
     action_descriptions = {k: v["description"] for k, v in actions.items()}
@@ -38,7 +33,10 @@ BROWSER / WEB (never use cannot_do for these):
 - os_open_chrome / os_open_url — same as above (built-in)
 If user asks to open any website → pick one of the above with https:// URL. NEVER cannot_do."""
 
-    rules = f"""Respond ONLY with a single valid JSON object:
+    rules = f"""CRITICAL: YOU MUST RESPOND ONLY WITH A SINGLE VALID JSON OBJECT.
+NO MARKDOWN. NO CODE BLOCKS. NO PREAMBLE. NO EXPLANATIONS.
+IF YOU VIOLATE THIS, THE SYSTEM WILL FAIL.
+
 {{"action": "action_name", "args": ["arg1"], "message": "Short reply"}}
 
 {multi_step}
@@ -51,7 +49,12 @@ RULES:
 - none: chat only, no system action
 - Respond in the same language as the user
 - NEVER output anything outside the JSON object
-- NEVER wrap JSON in markdown code blocks"""
+- NEVER wrap JSON in markdown code blocks like ```json ... ```
+
+SUGGESTIONS:
+Include a "suggestions" key in your JSON response with 2-3 logical next steps for the user.
+Example: If you create a script, suggestions could be ["run the script", "add error handling"].
+Format: {{"action": "...", "args": [...], "message": "...", "suggestions": ["opt1", "opt2"]}}"""
 
     if is_local:
         action_names = ", ".join(sorted(actions.keys()))

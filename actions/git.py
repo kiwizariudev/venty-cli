@@ -1,12 +1,7 @@
-"""
-actions/git.py — git operations
-"""
 import subprocess
-
 
 def _run(cmd):
     return subprocess.run(cmd, shell=True, capture_output=True, text=True)
-
 
 ACTIONS = {
     "os_git_clone": {

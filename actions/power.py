@@ -1,15 +1,9 @@
-"""
-actions/power.py — power management (shutdown, restart, sleep, lock, volume)
-"""
 import subprocess
-
 
 def _run(args):
     return subprocess.run(args, capture_output=True, text=True)
 
-
 ACTIONS = {
-    # ── Volume ────────────────────────────────────────────────
     "os_volume_up": {
         "description": "Turn volume up",
         "execute": lambda a: _run(["nircmd", "changesysvolume", "5000"]),
@@ -30,7 +24,6 @@ ACTIONS = {
         "description": "Set volume to maximum",
         "execute": lambda a: _run(["nircmd", "setsysvolume", "65535"]),
     },
-    # ── Power ─────────────────────────────────────────────────
     "os_shutdown": {
         "description": "Shutdown computer, args = [delay seconds]",
         "execute": lambda a: _run(["shutdown", "/s", "/t", a[0] if a else "30"]),

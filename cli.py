@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import subprocess
 import requests
 import json
@@ -17,12 +16,10 @@ import base64
 import zipfile
 import glob
 
-# ── project root on path so core/ actions/ ui/ are importable ────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-# ── optional new modules (graceful fallback if not present) ──────────────────
 try:
     from core.aliases   import resolve as _resolve_alias, load_aliases, set_alias, remove_alias
     from core.scheduler import tick as _scheduler_tick, list_jobs, cancel_job, schedule_once, schedule_repeat
@@ -33,6 +30,7 @@ try:
     from core.tasks     import run_task_plan
     from core.executor  import execute_action as _core_execute_action
     from core.plugins   import load_all_plugins, get_registry, get_load_errors, format_plugins_for_prompt
+    from ui.colors      import print_banner as _ui_print_banner, print_venty as _ui_print_venty, print_success as _ui_print_success, print_error as _ui_print_error, print_warning as _ui_print_warning, print_info as _ui_print_info, print_output as _ui_print_output, print_action as _ui_print_action, print_loop_step as _ui_print_loop_step, print_separator as _ui_print_separator, print_step as _ui_print_step, Colors as UIColors
     _HAS_CORE = True
 except ImportError:
     _HAS_CORE = False
@@ -41,41 +39,31 @@ except ImportError:
     def forget(t): return "memory module not available"
     def list_notes(): return "memory module not available"
     def clear_notes(): return "memory module not available"
-    def extract_first_json(text):
-        return _extract_first_json_fallback(text)
-    def _build_system_prompt(actions, cfg):
-        return build_system_prompt_fallback()
+    def extract_first_json(text): return _extract_first_json_fallback(text)
+    def _build_system_prompt(actions, cfg): return build_system_prompt_fallback()
     def run_task_plan(*a, **k): pass
-    def _core_execute_action(*a, **k):
-        return False, "core not available"
-    def load_all_plugins(*a, **k):
-        return {}, []
-    def get_registry():
-        return []
-    def get_load_errors():
-        return []
-    def format_plugins_for_prompt(*a, **k):
-        return ""
+    def _core_execute_action(*a, **k): return False, "core not available"
+    def load_all_plugins(*a, **k): return {}, []
+    def get_registry(): return []
+    def get_load_errors(): return []
+    def format_plugins_for_prompt(*a, **k): return ""
+    def _ui_print_banner(*a, **k): pass
+    def _ui_print_venty(*a, **k): pass
+    def _ui_print_success(*a, **k): pass
+    def _ui_print_error(*a, **k): pass
+    def _ui_print_warning(*a, **k): pass
+    def _ui_print_info(*a, **k): pass
+    def _ui_print_output(*a, **k): pass
+    def _ui_print_action(*a, **k): pass
+    def _ui_print_loop_step(*a, **k): pass
+    def _ui_print_separator(*a, **k): pass
+    def _ui_print_step(*a, **k): pass
 
-# ============================================================
-# PATHS (core.paths is the single source of truth)
-# ============================================================
 try:
     from core.paths import (
-        ensure_dirs,
-        CONFIG_PATH,
-        HISTORY_PATH,
-        LOG_PATH,
-        ERROR_PATH,
-        CACHE_PATH,
-        ALIASES_PATH,
-        THEMES_PATH,
-        KEYBINDS_PATH,
-        SANDBOX_DIR,
-        RUNTIME_DIR,
-        PLUGINS_DIR,
-        SESSION_PATH,
-        default_working_dir,
+        ensure_dirs, CONFIG_PATH, HISTORY_PATH, LOG_PATH, ERROR_PATH,
+        CACHE_PATH, ALIASES_PATH, THEMES_PATH, KEYBINDS_PATH, SANDBOX_DIR,
+        RUNTIME_DIR, PLUGINS_DIR, SESSION_PATH, default_working_dir,
     )
     ensure_dirs()
 except ImportError:
@@ -91,18 +79,13 @@ except ImportError:
     SANDBOX_DIR = os.path.join(BASE_DIR, "data", "sandbox")
     RUNTIME_DIR = os.path.join(BASE_DIR, "data", "runtime")
     PLUGINS_DIR = os.path.join(BASE_DIR, "extensions", "plugins")
-    def default_working_dir():
-        return SANDBOX_DIR
+    def default_working_dir(): return SANDBOX_DIR
     def ensure_dirs():
         for f in ["data/config", "data/memory", "data/logs", "data/cache",
                   "data/sandbox", "data/runtime", "data/scheduler", "extensions/plugins"]:
             os.makedirs(os.path.join(BASE_DIR, f.replace("/", os.sep)), exist_ok=True)
     ensure_dirs()
 
-
-# ============================================================
-# LOGGING
-# ============================================================
 logger = logging.getLogger("venty")
 logger.setLevel(logging.DEBUG)
 file_handler  = logging.FileHandler(LOG_PATH,   encoding="utf-8")
@@ -115,9 +98,6 @@ error_handler.setFormatter(fmt)
 logger.addHandler(file_handler)
 logger.addHandler(error_handler)
 
-# ============================================================
-# CONFIG
-# ============================================================
 DEFAULT_CONFIG = {
     "api_key":             "",
     "model":               "",
@@ -139,7 +119,6 @@ DEFAULT_CONFIG = {
 
 def load_config():
     if not os.path.exists(CONFIG_PATH):
-        logger.warning("No settings.json found — run setup.py first")
         return DEFAULT_CONFIG.copy()
     try:
         with open(CONFIG_PATH, "r") as f:
@@ -164,10 +143,6 @@ API_KEY = CONFIG.get("api_key", "")
 MODEL   = CONFIG.get("model",   "")
 URL     = CONFIG.get("url",     "https://api.groq.com/openai/v1/chat/completions")
 
-
-# ============================================================
-# THEMES
-# ============================================================
 DEFAULT_THEMES = {
     "default": {"primary":"96","secondary":"95","success":"92","error":"91","warning":"93","info":"90","user":"94"},
     "dark":    {"primary":"36","secondary":"35","success":"32","error":"31","warning":"33","info":"90","user":"34"},
@@ -202,9 +177,6 @@ def _c(key):
     code = _ACTIVE_THEME.get(key, "97")
     return f"\033[{code}m"
 
-# ============================================================
-# COLORS
-# ============================================================
 class Colors:
     RESET  = "\033[0m"
     BOLD   = "\033[1m"
@@ -221,48 +193,76 @@ class Colors:
 VENTY_COLORS = [Colors.CYAN, Colors.PURPLE, Colors.BLUE, Colors.GREEN, Colors.YELLOW]
 
 def vc():
+    if _HAS_CORE:
+        from ui.colors import vc as _vc
+        return _vc()
     return random.choice(VENTY_COLORS)
 
 def print_venty(message):
-    c = vc()
-    print(f"\n{c}{Colors.BOLD}Venty >{Colors.RESET} {c}{message}{Colors.RESET}")
+    if _HAS_CORE:
+        _ui_print_venty(message)
+    else:
+        c = vc()
+        print(f"\n{c}{Colors.BOLD}Venty >{Colors.RESET} {c}{message}{Colors.RESET}")
 
-def print_success(msg): print(f"{_c('success')}  + {msg}{Colors.RESET}")
-def print_error(msg):   print(f"{_c('error')}  x {msg}{Colors.RESET}")
-def print_warning(msg): print(f"{_c('warning')}  ! {msg}{Colors.RESET}")
-def print_info(msg):    print(f"{_c('info')}  > {msg}{Colors.RESET}")
-def print_output(text): print(f"\n{_c('info')}{text}{Colors.RESET}")
+def print_success(msg):
+    if _HAS_CORE: _ui_print_success(msg)
+    else: print(f"{_c('success')}  + {msg}{Colors.RESET}")
+
+def print_error(msg):
+    if _HAS_CORE: _ui_print_error(msg)
+    else: print(f"{_c('error')}  x {msg}{Colors.RESET}")
+
+def print_warning(msg):
+    if _HAS_CORE: _ui_print_warning(msg)
+    else: print(f"{_c('warning')}  ! {msg}{Colors.RESET}")
+
+def print_info(msg):
+    if _HAS_CORE: _ui_print_info(msg)
+    else: print(f"{_c('info')}  > {msg}{Colors.RESET}")
+
+def print_output(text):
+    if _HAS_CORE: _ui_print_output(text)
+    else: print(f"\n{_c('info')}{text}{Colors.RESET}")
 
 def print_action(action, args):
-    args_str = ", ".join(str(a) for a in args) if args else "no args"
-    print(f"{_c('warning')}  * action: {Colors.BOLD}{action}{Colors.RESET}{_c('warning')} -> [{args_str}]{Colors.RESET}")
+    if _HAS_CORE: _ui_print_action(action, args)
+    else:
+        args_str = ", ".join(str(a) for a in args) if args else "no args"
+        print(f"{_c('warning')}  * action: {Colors.BOLD}{action}{Colors.RESET}{_c('warning')} -> [{args_str}]{Colors.RESET}")
 
 def print_loop_step(i, total, action, args):
-    args_str = ", ".join(str(a) for a in args) if args else "no args"
-    print(f"{_c('secondary')}  loop [{i}/{total}] {Colors.BOLD}{action}{Colors.RESET}{_c('secondary')} -> [{args_str}]{Colors.RESET}")
+    if _HAS_CORE: _ui_print_loop_step(i, total, action, args)
+    else:
+        args_str = ", ".join(str(a) for a in args) if args else "no args"
+        print(f"{_c('secondary')}  loop [{i}/{total}] {Colors.BOLD}{action}{Colors.RESET}{_c('secondary')} -> [{args_str}]{Colors.RESET}")
 
 def print_separator():
-    print(f"{_c('info')}  {'—' * 52}{Colors.RESET}")
+    if _HAS_CORE: _ui_print_separator()
+    else: print(f"{_c('info')}  {'—' * 52}{Colors.RESET}")
 
 def print_banner():
-    c = random.choice(VENTY_COLORS)
-    provider     = CONFIG.get("provider",     "")
-    display_name = CONFIG.get("display_name", "") or CONFIG.get("model", "not configured")
-    print(f"""
-{c}{Colors.BOLD}
-  ██╗   ██╗███████╗███╗   ██╗████████╗██╗   ██╗
-  ██║   ██║██╔════╝████╗  ██║╚══██╔══╝╚██╗ ██╔╝
-  ██║   ██║█████╗  ██╔██╗ ██║   ██║    ╚████╔╝
-  ╚██╗ ██╔╝██╔══╝  ██║╚██╗██║   ██║     ╚██╔╝
-   ╚████╔╝ ███████╗██║ ╚████║   ██║      ██║
-    ╚═══╝  ╚══════╝╚═╝  ╚═══╝   ╚═╝      ╚═╝
-{Colors.RESET}{Colors.GRAY}  AI Desktop Assistant  •  {provider if provider else "Venty"}  •  {display_name}
-{Colors.RESET}""")
+    if _HAS_CORE:
+        provider = CONFIG.get("provider", "")
+        display_name = CONFIG.get("display_name", "") or CONFIG.get("model", "not configured")
+        _ui_print_banner(provider, display_name)
+    else:
+        c = random.choice(VENTY_COLORS)
+        provider     = CONFIG.get("provider",     "")
+        display_name = CONFIG.get("display_name", "") or CONFIG.get("model", "not configured")
+        banner_lines = [
+            f"  {c} .~~~.     {Colors.BOLD} ██╗   ██╗███████╗███╗   ██╗████████╗██╗   ██╗",
+            f"  {c}(o . o)    {Colors.BOLD} ██║   ██║██╔════╝████╗  ██║╚══██╔══╝╚██╗ ██╔╝",
+            f"  {c} ) v (     {Colors.BOLD} ██║   ██║█████╗  ██╔██╗ ██║   ██║    ╚████╔╝",
+            f"  {c}~~ ~ ~~    {Colors.BOLD} ╚██╗ ██╔╝██╔══╝  ██║╚██╗██║   ██║     ╚██╔╝ ",
+            f"  {c}~ ~ ~ ~ ~  {Colors.BOLD}  ╚████╔╝ ███████╗██║ ╚████║   ██║      ██║  ",
+            f"  {c}           {Colors.BOLD}   ╚═══╝  ╚══════╝╚═╝  ╚═══╝   ╚═╝      ╚═╝  "
+        ]
+        print("\n" + "\n".join(banner_lines))
+        print(f"{Colors.RESET}{Colors.GRAY}                        Welcome to the new Venty CLI UX! /help to learn more.")
+        print(f"{Colors.RESET}{Colors.GRAY}                             AI Desktop Assistant  •  {provider if provider else 'Venty'}  •  {display_name}")
+        print_separator()
 
-
-# ============================================================
-# HISTORY
-# ============================================================
 def load_history():
     if not os.path.exists(HISTORY_PATH):
         return []
@@ -310,9 +310,6 @@ def log_action(action, args, success, output=None):
     except Exception as e:
         logger.error(f"Failed to log action: {e}")
 
-# ============================================================
-# ALIASES
-# ============================================================
 def _load_aliases():
     if not os.path.exists(ALIASES_PATH):
         return {}
@@ -333,10 +330,6 @@ def resolve_alias(text):
             return expansion + text[len(name):]
     return text
 
-
-# ============================================================
-# HELPERS
-# ============================================================
 def run(cmd, **kwargs):
     return subprocess.run(cmd, capture_output=True, text=True, **kwargs)
 
@@ -354,7 +347,6 @@ def file_hash(path, algo="sha256"):
     return h.hexdigest()
 
 def resolve_path(path):
-    """Resolve relative paths against working_dir."""
     if os.path.isabs(path) or path.startswith("http"):
         return path
     return os.path.join(CONFIG.get("working_dir", BASE_DIR), path)
@@ -373,17 +365,12 @@ def _extract_first_json_fallback(text):
             pass
     return None
 
-
 if _HAS_CORE:
     def _extract_first_json(text):
         return extract_first_json(text)
 else:
     _extract_first_json = _extract_first_json_fallback
 
-
-# ============================================================
-# ACTIONS — loaded from actions/ package + memory
-# ============================================================
 try:
     from actions import ACTIONS as _PKG_ACTIONS
     ACTIONS = dict(_PKG_ACTIONS)
@@ -392,38 +379,26 @@ except ImportError as _e:
     ACTIONS = {}
 
 ACTIONS.update({
-    "memory_remember": {"description": "Save a fact/note to memory, args = [text] or [text, category]", "execute": lambda a: stdout_obj(remember(a[0], a[1] if len(a) > 1 else "facts"))},
+    "memory_remember": {"description": "Save a fact/note to memory, args = [text]", "execute": lambda a: stdout_obj(remember(a[0], a[1] if len(a) > 1 else "facts"))},
     "memory_forget":   {"description": "Remove a note from memory, args = [text_to_match]", "execute": lambda a: stdout_obj(forget(a[0]))},
     "memory_list":     {"description": "List all saved notes", "execute": lambda a: stdout_obj(list_notes())},
     "memory_clear":    {"description": "Clear all saved notes", "execute": lambda a: stdout_obj(clear_notes())},
 })
 
-
 def reload_plugins():
-    """Load plugins from extensions/plugins/ into ACTIONS."""
     global _PLUGIN_REGISTRY
     if _HAS_CORE:
         plugin_actions, _PLUGIN_REGISTRY = load_all_plugins(PLUGINS_DIR)
-        # remove old plugin-prefixed actions then re-add
         to_remove = [k for k, v in ACTIONS.items() if v.get("plugin")]
         for k in to_remove:
             del ACTIONS[k]
         ACTIONS.update(plugin_actions)
-        for p in _PLUGIN_REGISTRY:
-            logger.info(f"Plugin: {p['name']} v{p['version']} ({len(p['actions'])} actions)")
-        for err in get_load_errors():
-            logger.error(f"Plugin failed: {err['id']} — {err['error']}")
         return len(plugin_actions)
     return 0
-
 
 _PLUGIN_REGISTRY = []
 reload_plugins()
 
-
-# ============================================================
-# SYSTEM PROMPT
-# ============================================================
 def build_system_prompt():
     if _HAS_CORE:
         base = _build_system_prompt(ACTIONS, CONFIG)
@@ -431,7 +406,7 @@ def build_system_prompt():
         if block:
             return base + "\n\n" + block
         return base
-    working_dir  = CONFIG.get("working_dir", default_working_dir() if "default_working_dir" in dir() else BASE_DIR)
+    working_dir  = CONFIG.get("working_dir", BASE_DIR)
     now          = datetime.datetime.now().strftime("%A %d %B %Y  %H:%M")
     provider     = CONFIG.get("provider", "").lower()
     is_local     = provider in ("lm studio", "lmstudio") or "localhost" in CONFIG.get("url", "") or "127.0.0.1" in CONFIG.get("url", "")
@@ -473,22 +448,10 @@ You MUST reply with ONLY a JSON object, nothing else. No explanation, no markdow
 Format:
 {{"action": "action_name", "args": ["arg1"], "message": "your reply to the user"}}
 
-Examples:
-- User says "hello" → {{"action": "none", "args": [], "message": "Hello! How can I help?"}}
-- User says "open notepad" → {{"action": "os_open", "args": ["notepad"], "message": "Opening Notepad"}}
-- User says "make a file test.py" → {{"action": "os_create_file", "args": ["test.py"], "message": "Created test.py"}}
-- User says "run test.py" → {{"action": "os_run_python", "args": ["test.py"], "message": "Running test.py"}}
-- User says "remember my name is John" → {{"action": "memory_remember", "args": ["user name is John"], "message": "Got it, I'll remember that."}}
-- User says "create and run a hello world python file" → {{"action": "task_plan", "steps": [{{"action": "os_write_file", "args": ["hello.py", "print('Hello World')"]}}, {{"action": "os_run_python", "args": ["hello.py"]}}], "message": "Creating and running hello.py"}}
-
-Available action names (pick the closest match):
+Available action names:
 {action_names}
 
-Rules:
-- args are plain strings only
-- Use absolute paths based on working_dir: {working_dir}
-- Respond in same language as user
-- ONLY output the JSON object, nothing else"""
+Rules: args are plain strings only; use absolute paths based on working_dir; respond in same language; ONLY output JSON."""
     else:
         return f"""You are Venty, a smart and powerful AI assistant that controls a Windows computer.
 
@@ -504,12 +467,7 @@ CANNOT DO:
 - Accessing private data without permission
 - Anything illegal or harmful to others"""
 
-
-# ============================================================
-# STREAMING ASK
-# ============================================================
 def _ask_streaming(messages, api_key, model, url):
-    """Stream response tokens (buffered); display is handled by the main loop."""
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {
         "model":       model,
@@ -520,51 +478,24 @@ def _ask_streaming(messages, api_key, model, url):
     }
     full = ""
     try:
-        with requests.post(url, headers=headers, json=payload,
-                           stream=True, timeout=CONFIG.get("timeout", 60)) as resp:
+        with requests.post(url, headers=headers, json=payload, stream=True, timeout=CONFIG.get("timeout", 60)) as resp:
             resp.raise_for_status()
             for line in resp.iter_lines():
-                if not line:
-                    continue
+                if not line: continue
                 line = line.decode("utf-8") if isinstance(line, bytes) else line
                 if line.startswith("data: "):
                     data = line[6:]
-                    if data.strip() == "[DONE]":
-                        break
+                    if data.strip() == "[DONE]": break
                     try:
                         chunk = json.loads(data)
                         delta = chunk["choices"][0].get("delta", {})
                         token = delta.get("content", "")
-                        if token:
-                            full += token
-                    except Exception:
-                        pass
-    except requests.exceptions.HTTPError as e:
-        status = e.response.status_code if e.response is not None else 0
-        if status == 429:
-            retry_after = e.response.headers.get("retry-after", "60")
-            print_error(f"rate limit (429) — wait ~{retry_after}s or switch model in setup.py")
-            logger.error(f"429: {e}")
-        elif status == 401:
-            print_error("invalid API key (401) — run setup.py")
-            logger.error(f"401: {e}")
-        else:
-            print_error(f"API error {status}")
-            logger.error(f"HTTP {status}: {e}")
-        return None
-    except requests.exceptions.ConnectionError:
-        print_error("connection error — check your internet")
-        logger.error("Connection error")
-        return None
-    except requests.exceptions.Timeout:
-        print_warning("timeout")
-        logger.warning("Timeout")
-        return None
+                        if token: full += token
+                    except: pass
+    except: return None
     return full.strip()
 
-
 def _ask_standard(messages, api_key, model, url):
-    """Non-streaming fallback (for providers that don't support streaming)."""
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {
         "model":       model,
@@ -573,104 +504,49 @@ def _ask_standard(messages, api_key, model, url):
         "max_tokens":  CONFIG.get("max_tokens",  700),
     }
     try:
-        resp = requests.post(url, headers=headers, json=payload,
-                             timeout=CONFIG.get("timeout", 60))
+        resp = requests.post(url, headers=headers, json=payload, timeout=CONFIG.get("timeout", 60))
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"].strip()
-    except requests.exceptions.HTTPError as e:
-        status = e.response.status_code if e.response is not None else 0
-        if status == 429:
-            retry_after = e.response.headers.get("retry-after", "60")
-            print_error(f"rate limit (429) — wait ~{retry_after}s or switch model in setup.py")
-        elif status == 401:
-            print_error("invalid API key (401) — run setup.py")
-        elif status == 402:
-            print_error("payment required (402) — check your API plan")
-        else:
-            print_error(f"API error {status}")
-        logger.error(f"HTTP {status}: {e}")
-        return None
-    except requests.exceptions.ConnectionError:
-        print_error("connection error — check your internet")
-        logger.error("Connection error")
-        return None
-    except requests.exceptions.Timeout:
-        print_warning("timeout, retrying...")
-        logger.warning("Timeout")
-        return None
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        return None
+    except: return None
 
-
-# ============================================================
-# ASK VENTY
-# ============================================================
 def ask_venty(user_input, conversation_history):
     conversation_history.append({"role": "user", "content": user_input})
-    logger.info(f"User: {user_input}")
-
     api_key  = CONFIG.get("api_key", "")
     model    = CONFIG.get("model",   "")
     url      = CONFIG.get("url",     "https://api.groq.com/openai/v1/chat/completions")
     use_stream = CONFIG.get("stream", True)
-
     last_raw = None
 
     for attempt in range(3):
         messages = [{"role": "system", "content": build_system_prompt()}] + conversation_history
-
         print(f"{Colors.GRAY}  thinking...{Colors.RESET}", end="\r")
-
         if use_stream:
             raw = _ask_streaming(messages, api_key, model, url)
         else:
             raw = _ask_standard(messages, api_key, model, url)
-
-        if raw is None:
-            return None
-
+        if raw is None: return None
         last_raw = raw
-
         if _extract_first_json(raw) is not None:
             conversation_history.append({"role": "assistant", "content": raw})
-            logger.info(f"Venty: {raw[:100]}")
             return raw
-
-        # check for task_plan
         try:
             parsed = json.loads(re.sub(r"```json|```", "", raw).strip())
             if parsed.get("action") == "task_plan":
                 conversation_history.append({"role": "assistant", "content": raw})
-                logger.info(f"Venty task_plan: {raw[:100]}")
                 return raw
-        except Exception:
-            pass
-
-        logger.warning(f"Invalid JSON attempt {attempt + 1}: {raw[:80]}")
+        except: pass
         if attempt < 2:
             conversation_history.append({"role": "assistant", "content": raw})
-            conversation_history.append({
-                "role":    "user",
-                "content": "Invalid JSON. Reply ONLY with a single valid JSON object. No markdown, no extra text.",
-            })
-
+            conversation_history.append({"role": "user", "content": "Invalid JSON. Reply ONLY with a single valid JSON object."})
     return last_raw
-
 
 def parse_response(raw):
     return _extract_first_json(raw)
 
-
-# ============================================================
-# MULTI-STEP TASK HANDLER
-# ============================================================
 def handle_task_plan(parsed):
     steps   = parsed.get("steps", [])
     message = parsed.get("message", "Running task...")
-    if not steps:
-        print_error("task_plan has no steps")
-        return
+    if not steps: return
     print_venty(message)
     print_separator()
     print_info(f"task plan — {len(steps)} steps")
@@ -680,99 +556,54 @@ def handle_task_plan(parsed):
         args   = step.get("args",   [])
         print(f"{_c('secondary')}  [{i}/{len(steps)}] {Colors.BOLD}{action}{Colors.RESET}")
         print_action(action, args)
-        if action in ("none", "cannot_do"):
-            print_info("skipped")
-            continue
+        if action in ("none", "cannot_do"): continue
         success, output = execute_action(action, args)
         if success:
             print_success(f"step {i} done")
-            if output and CONFIG.get("show_output", True):
-                print_output(str(output)[:300])
+            if output and CONFIG.get("show_output", True): print_output(str(output)[:300])
         else:
             print_error(f"step {i} failed: {output}")
             confirm = input(f"  {Colors.YELLOW}continue anyway? [y/N] >{Colors.RESET} ").strip().lower()
-            if confirm != "y":
-                print_warning("task aborted")
-                return
+            if confirm != "y": return
         time.sleep(0.2)
     print_separator()
-    print_success(f"task complete — {len(steps)} steps done")
+    print_success(f"task complete")
 
-
-# ============================================================
-# EXECUTE
-# ============================================================
 def execute_action(action_name, args):
-    if action_name not in ACTIONS:
-        return False, f"unknown action: {action_name}"
-    if action_name in ("none", "cannot_do", "loop_start"):
-        return True, None
+    if action_name not in ACTIONS: return False, f"unknown action: {action_name}"
+    if action_name in ("none", "cannot_do", "loop_start"): return True, None
     try:
         result = ACTIONS[action_name]["execute"](args)
         output = getattr(result, "stdout", None)
         log_action(action_name, args, True, output)
-        logger.info(f"executed: {action_name} {args}")
         return True, output
-    except FileNotFoundError as e:
-        log_action(action_name, args, False, str(e))
-        logger.error(f"FileNotFound: {action_name} {e}")
-        return False, f"file not found: {e}"
-    except PermissionError:
-        log_action(action_name, args, False, "PermissionError")
-        logger.error(f"PermissionError: {action_name}")
-        return False, "permission denied — run as administrator"
     except Exception as e:
         log_action(action_name, args, False, str(e))
-        logger.error(f"failed: {action_name} {e}")
         return False, str(e)
 
-# ============================================================
-# LOOP
-# ============================================================
 def handle_loop(args):
-    if len(args) < 2:
-        print_error("loop needs at least count and action name")
-        return
-    try:
-        count = int(args[0])
-    except ValueError:
-        print_error(f"invalid count: {args[0]}")
-        return
-
+    if len(args) < 2: return
+    try: count = int(args[0])
+    except: return
     max_loop = CONFIG.get("max_loop", 20)
-    if count > max_loop:
-        print_warning(f"loop capped at {max_loop}")
-        count = max_loop
-
+    if count > max_loop: count = max_loop
     action_name = args[1]
     action_args = args[2:] if len(args) > 2 else []
-
-    if action_name not in ACTIONS:
-        print_error(f"unknown action: {action_name}")
-        return
-
-    logger.info(f"loop: {count}x {action_name} {action_args}")
+    if action_name not in ACTIONS: return
     print_info(f"starting loop x{count}")
     print_separator()
-
     for i in range(1, count + 1):
         print_loop_step(i, count, action_name, action_args)
         success, output = execute_action(action_name, action_args)
         if success:
             print_success(f"step {i} done")
-            if output and CONFIG.get("show_output", True):
-                print(f"{Colors.GRAY}    {str(output)[:150]}{Colors.RESET}")
+            if output and CONFIG.get("show_output", True): print(f"{Colors.GRAY}    {str(output)[:150]}{Colors.RESET}")
         else:
             print_error(f"step {i} failed: {output}")
         time.sleep(0.3)
-
     print_separator()
-    print_success(f"loop done — {count} iterations")
+    print_success(f"loop done")
 
-
-# ============================================================
-# BUILT-IN COMMANDS
-# ============================================================
 def cmd_actions():
     print(f"\n{Colors.YELLOW}{Colors.BOLD}  actions ({len(ACTIONS)} total){Colors.RESET}")
     print_separator()
@@ -793,8 +624,7 @@ def cmd_actions():
     }
     for cat, keys in categories.items():
         keys = [k for k in keys if k in ACTIONS]
-        if not keys:
-            continue
+        if not keys: continue
         print(f"\n  {Colors.CYAN}{Colors.BOLD}{cat}{Colors.RESET}")
         for k in keys:
             desc = ACTIONS[k]["description"][:65]
@@ -803,53 +633,40 @@ def cmd_actions():
 
 def cmd_history():
     entries = load_history()
-    if not entries:
-        print_venty("no history saved yet")
-        return
+    if not entries: return
     print(f"\n{Colors.YELLOW}{Colors.BOLD}  history ({len(entries)} entries){Colors.RESET}")
     print_separator()
     for e in entries[-20:]:
-        role    = e.get("role", "?").upper()
-        content = e.get("content", "")[:90].replace("\n", " ")
-        color   = Colors.BLUE if role == "USER" else Colors.CYAN
+        role, content = e.get("role", "?").upper(), e.get("content", "")[:90].replace("\n", " ")
+        color = Colors.BLUE if role == "USER" else Colors.CYAN
         print(f"  {color}{Colors.BOLD}{role:<12}{Colors.RESET}{Colors.GRAY}{content}{Colors.RESET}")
     print_separator()
 
 def cmd_logs():
-    if not os.path.exists(LOG_PATH):
-        print_venty("no logs yet")
-        return
+    if not os.path.exists(LOG_PATH): return
     print(f"\n{Colors.YELLOW}{Colors.BOLD}  recent logs{Colors.RESET}")
     print_separator()
     with open(LOG_PATH, "r", encoding="utf-8") as f:
         lines = f.readlines()
-    for line in lines[-25:]:
-        print(f"  {Colors.GRAY}{line.rstrip()}{Colors.RESET}")
+    for line in lines[-25:]: print(f"  {Colors.GRAY}{line.rstrip()}{Colors.RESET}")
     print_separator()
 
 def cmd_errors():
-    if not os.path.exists(ERROR_PATH):
-        print_venty("no errors logged")
-        return
+    if not os.path.exists(ERROR_PATH): return
     print(f"\n{Colors.YELLOW}{Colors.BOLD}  recent errors{Colors.RESET}")
     print_separator()
     with open(ERROR_PATH, "r", encoding="utf-8") as f:
         lines = f.readlines()
-    for line in lines[-20:]:
-        print(f"  {Colors.RED}{line.rstrip()}{Colors.RESET}")
+    for line in lines[-20:]: print(f"  {Colors.RED}{line.rstrip()}{Colors.RESET}")
     print_separator()
 
 def cmd_sessions():
-    path = SESSION_PATH
-    if not os.path.exists(path):
-        print_venty("no session log yet")
-        return
+    if not os.path.exists(SESSION_PATH): return
     print(f"\n{Colors.YELLOW}{Colors.BOLD}  session log{Colors.RESET}")
     print_separator()
-    with open(path, "r", encoding="utf-8") as f:
+    with open(SESSION_PATH, "r", encoding="utf-8") as f:
         lines = f.readlines()
-    for line in lines[-30:]:
-        print(f"  {Colors.GRAY}{line.rstrip()}{Colors.RESET}")
+    for line in lines[-30:]: print(f"  {Colors.GRAY}{line.rstrip()}{Colors.RESET}")
     print_separator()
 
 def cmd_config():
@@ -862,49 +679,32 @@ def cmd_config():
 
 def cmd_set(args_str):
     parts = args_str.strip().split(" ", 1)
-    if len(parts) < 2:
-        print_error("usage: set <key> <value>")
-        print_info("editable: temperature, max_tokens, max_loop, save_history, show_output, confirm_dangerous, timeout, working_dir, theme, max_session_turns")
-        return
+    if len(parts) < 2: return
     key, val = parts[0], parts[1]
-    editable = ["temperature","max_tokens","max_loop","save_history","show_output",
-                "confirm_dangerous","timeout","working_dir","theme","max_session_turns","stream"]
-    if key not in editable:
-        print_error(f"key '{key}' is not editable here")
-        return
+    editable = ["temperature","max_tokens","max_loop","save_history","show_output","confirm_dangerous","timeout","working_dir","theme","max_session_turns","stream"]
+    if key not in editable: return
     if key == "working_dir":
-        if not os.path.isdir(val):
-            print_error(f"directory not found: {val}")
-            return
+        if not os.path.isdir(val): return
         CONFIG[key] = val
     elif key == "theme":
         CONFIG[key] = val
         apply_theme(val)
     else:
         try:
-            if val.lower() in ("true", "false"):
-                val = val.lower() == "true"
-            elif "." in val:
-                val = float(val)
-            else:
-                val = int(val)
-        except:
-            pass
+            if val.lower() in ("true", "false"): val = val.lower() == "true"
+            elif "." in val: val = float(val)
+            else: val = int(val)
+        except: pass
         CONFIG[key] = val
     save_config(CONFIG)
     print_success(f"set {key} = {CONFIG[key]}")
-    logger.info(f"Config updated: {key} = {CONFIG[key]}")
 
 def cmd_stats():
-    if not os.path.exists(CACHE_PATH):
-        print_venty("no stats yet")
-        return
+    if not os.path.exists(CACHE_PATH): return
     try:
-        with open(CACHE_PATH, "r") as f:
-            data = json.load(f)
-        total   = len(data)
-        success = sum(1 for d in data if d.get("success"))
-        counts  = {}
+        with open(CACHE_PATH, "r") as f: data = json.load(f)
+        total, success = len(data), sum(1 for d in data if d.get("success"))
+        counts = {}
         for d in data:
             a = d.get("action", "?")
             counts[a] = counts.get(a, 0) + 1
@@ -914,33 +714,24 @@ def cmd_stats():
         print(f"  {Colors.GRAY}total actions  {Colors.WHITE}{total}{Colors.RESET}")
         print(f"  {Colors.GRAY}succeeded      {Colors.GREEN}{success}{Colors.RESET}")
         print(f"  {Colors.GRAY}failed         {Colors.RED}{total - success}{Colors.RESET}")
-        print(f"\n  {Colors.YELLOW}top actions:{Colors.RESET}")
         for name, count in top:
             bar = "█" * min(count, 20)
             print(f"  {Colors.GRAY}  {name:<35}{Colors.CYAN}{bar}{Colors.RESET} {count}")
         print_separator()
-    except Exception as e:
-        print_error(f"could not read stats: {e}")
+    except: pass
 
 def cmd_aliases():
     aliases = _load_aliases()
-    if not aliases:
-        print_venty("no aliases defined — use: alias <name> = <expansion>")
-        return
+    if not aliases: return
     print(f"\n{Colors.YELLOW}{Colors.BOLD}  aliases{Colors.RESET}")
     print_separator()
-    for name, exp in aliases.items():
-        print(f"  {Colors.BOLD}{name:<20}{Colors.RESET}{Colors.GRAY}{exp}{Colors.RESET}")
+    for name, exp in aliases.items(): print(f"  {Colors.BOLD}{name:<20}{Colors.RESET}{Colors.GRAY}{exp}{Colors.RESET}")
     print_separator()
 
 def cmd_jobs():
-    if not _HAS_CORE:
-        print_error("scheduler module not available")
-        return
+    if not _HAS_CORE: return
     jobs = list_jobs()
-    if not jobs:
-        print_venty("no scheduled jobs")
-        return
+    if not jobs: return
     print(f"\n{Colors.YELLOW}{Colors.BOLD}  scheduled jobs{Colors.RESET}")
     print_separator()
     for j in jobs:
@@ -952,16 +743,12 @@ def cmd_keybinds():
     kb = {}
     if os.path.exists(KEYBINDS_PATH):
         try:
-            with open(KEYBINDS_PATH, "r") as f:
-                kb = json.load(f)
-        except:
-            pass
-    if not kb:
-        kb = {"clear":"ctrl+l","history":"ctrl+h","help":"ctrl+?","exit":"ctrl+c"}
+            with open(KEYBINDS_PATH, "r") as f: kb = json.load(f)
+        except: pass
+    if not kb: kb = {"clear":"ctrl+l","history":"ctrl+h","help":"ctrl+?","exit":"ctrl+c"}
     print(f"\n{Colors.YELLOW}{Colors.BOLD}  keybinds{Colors.RESET}")
     print_separator()
-    for action, key in kb.items():
-        print(f"  {Colors.BOLD}{action:<20}{Colors.RESET}{Colors.GRAY}{key}{Colors.RESET}")
+    for action, key in kb.items(): print(f"  {Colors.BOLD}{action:<20}{Colors.RESET}{Colors.GRAY}{key}{Colors.RESET}")
     print_separator()
 
 def cmd_reload():
@@ -971,193 +758,137 @@ def cmd_reload():
     MODEL   = CONFIG.get("model",   "")
     URL     = CONFIG.get("url",     "")
     apply_theme(CONFIG.get("theme", "default"))
-    print_success("config reloaded from settings.json")
-    print_info(f"provider     : {CONFIG.get('provider', 'unknown')}")
-    print_info(f"model        : {MODEL}")
-    print_info(f"display name : {CONFIG.get('display_name', MODEL)}")
+    print_success("config reloaded")
 
 def cmd_clear_history():
-    if os.path.exists(HISTORY_PATH):
-        os.remove(HISTORY_PATH)
-    print_success("history file cleared")
+    if os.path.exists(HISTORY_PATH): os.remove(HISTORY_PATH)
+    print_success("history cleared")
 
 def cmd_clear_logs():
     for p in [LOG_PATH, ERROR_PATH]:
-        if os.path.exists(p):
-            open(p, "w").close()
+        if os.path.exists(p): open(p, "w").close()
     print_success("logs cleared")
 
 def cmd_clear_cache():
-    if os.path.exists(CACHE_PATH):
-        os.remove(CACHE_PATH)
+    if os.path.exists(CACHE_PATH): os.remove(CACHE_PATH)
     print_success("cache cleared")
 
 def cmd_plugins():
     print(f"\n{Colors.YELLOW}{Colors.BOLD}  plugins{Colors.RESET}")
     print_separator()
     if not _PLUGIN_REGISTRY:
-        print_info("no plugins loaded — add .py files to extensions/plugins/")
-        print_info("copy extensions/plugins/_template.py to start")
+        print_info("no plugins loaded")
     else:
         for p in _PLUGIN_REGISTRY:
             print(f"  {Colors.CYAN}{Colors.BOLD}{p['name']}{Colors.RESET} {Colors.GRAY}v{p['version']}{Colors.RESET}")
-            if p.get("description"):
-                print(f"    {Colors.GRAY}{p['description']}{Colors.RESET}")
-            if p.get("author"):
-                print(f"    {Colors.GRAY}by {p['author']}{Colors.RESET}")
             acts = p.get("actions", [])
             print(f"    {Colors.GREEN}{len(acts)} actions:{Colors.RESET} {', '.join(acts[:6])}")
-            if len(acts) > 6:
-                print(f"    {Colors.GRAY}… +{len(acts) - 6} more{Colors.RESET}")
-            print()
-    errs = get_load_errors() if _HAS_CORE else []
-    if errs:
-        print_warning("failed to load:")
-        for e in errs:
-            print_error(f"  {e['id']}: {e['error']}")
-    print_info("create plugins: extensions/plugins/ — see _template.py")
-    print_info("reload after edits: reload plugins")
     print_separator()
-
 
 def cmd_help():
     print(f"\n{Colors.YELLOW}{Colors.BOLD}  commands{Colors.RESET}")
     print_separator()
     cmds = [
-        ("actions",              "list all available actions (grouped by category)"),
-        ("history",              "show conversation history"),
-        ("sessions",             "show session log"),
-        ("logs",                 "show recent log entries"),
-        ("errors",               "show recent error entries"),
-        ("config",               "show current configuration"),
-        ("set <k> <v>",          "change a config value  [temperature, max_tokens, max_loop, working_dir, theme, stream...]"),
-        ("reload",               "reload config from settings.json"),
-        ("stats",                "show action usage statistics with bar chart"),
-        ("memory",               "show all saved notes/facts"),
-        ("remember <text>",      "save a note to memory"),
-        ("forget <text>",        "remove a note from memory"),
-        ("clear memory",         "clear all saved notes"),
-        ("aliases",              "list all aliases"),
-        ("alias <name> = <exp>", "create a command alias"),
-        ("unalias <name>",       "remove an alias"),
-        ("jobs",                 "list scheduled jobs"),
-        ("cancel <job_id>",      "cancel a scheduled job"),
-        ("keybinds",             "show keybinds"),
-        ("clear",                "clear screen and reset conversation memory"),
-        ("clear history",        "delete saved history file"),
-        ("clear logs",           "clear log files"),
-        ("clear cache",          "clear action cache"),
-        ("plugins",              "list loaded plugins and their actions"),
-        ("reload plugins",       "reload plugins from extensions/plugins/"),
-        ("help",                 "show this message"),
-        ("exit",                 "quit venty"),
+        ("actions", "list all available actions"),
+        ("history", "show conversation history"),
+        ("sessions", "show session log"),
+        ("logs", "show recent log entries"),
+        ("errors", "show recent error entries"),
+        ("config", "show current configuration"),
+        ("set <k> <v>", "change a config value"),
+        ("reload", "reload config"),
+        ("stats", "show action statistics"),
+        ("memory", "show all saved notes"),
+        ("remember <text>", "save a note"),
+        ("forget <text>", "remove a note"),
+        ("clear memory", "clear all notes"),
+        ("aliases", "list all aliases"),
+        ("alias <name> = <exp>", "create an alias"),
+        ("unalias <name>", "remove an alias"),
+        ("jobs", "list scheduled jobs"),
+        ("cancel <job_id>", "cancel a job"),
+        ("keybinds", "show keybinds"),
+        ("clear", "clear screen and memory"),
+        ("clear history", "delete history file"),
+        ("clear logs", "clear log files"),
+        ("clear cache", "clear action cache"),
+        ("plugins", "list loaded plugins"),
+        ("reload plugins", "reload plugins"),
+        ("help", "show this message"),
+        ("exit", "quit venty"),
     ]
-    for cmd, desc in cmds:
-        print(f"  {Colors.CYAN}{Colors.BOLD}{cmd:<28}{Colors.RESET}{Colors.GRAY}{desc}{Colors.RESET}")
+    for cmd, desc in cmds: print(f"  {Colors.CYAN}{Colors.BOLD}{cmd:<28}{Colors.RESET}{Colors.GRAY}{desc}{Colors.RESET}")
     print_separator()
 
+def show_suggestions(suggestions):
+    if not suggestions: return None
+    print(f"\n  {Colors.YELLOW}Suggestions:{Colors.RESET}")
+    for i, s in enumerate(suggestions, 1): print(f"  {Colors.CYAN}{i}. {Colors.RESET}{s}")
+    print(f"\n  {Colors.GRAY}(Type number to select or just type your next message){Colors.RESET}")
+    return suggestions
 
-# ============================================================
-# MAIN
-# ============================================================
 def main():
     if os.name == "nt":
         os.system("cls")
         os.system("color")
-
     print_banner()
-
-    if _HAS_CORE:
-        log_session_start()
-    logger.info("Venty started")
-
-    if not CONFIG.get("api_key"):
-        print_warning("no API key configured — run setup.py first")
-        print_info("python setup.py")
-        print()
-
+    if _HAS_CORE: log_session_start()
     print(f"{Colors.GRAY}  connecting...{Colors.RESET}", end="", flush=True)
     try:
         _url = CONFIG.get("url", "")
         base_url = _url.split("/v1/")[0] if "/v1/" in _url else _url
         requests.get(base_url, timeout=5)
         print(f" {Colors.GREEN}connected{Colors.RESET}")
-        logger.info(f"Connected to {base_url}")
     except:
         print(f" {Colors.YELLOW}offline or unreachable{Colors.RESET}")
-        logger.warning("Could not verify connection")
-
     now = datetime.datetime.now().strftime("%A %d %B %Y  %H:%M")
     print(f"{Colors.GRAY}  {now}{Colors.RESET}")
     print(f"{Colors.GRAY}  {len(ACTIONS)} actions available  •  type 'help' for commands{Colors.RESET}\n")
     print_separator()
-
-    conversation_history = []
-    session_actions = 0
-
+    print(f" {Colors.CYAN}{CONFIG.get('display_name') or CONFIG.get('model', 'Venty')} · auto {Colors.RESET}                                                                    {Colors.GRAY}{os.getcwd()}{Colors.RESET}\n")
+    print(f"  {Colors.BOLD}ask a question or describe a task ↵{Colors.RESET}")
+    print_separator()
+    conversation_history, session_actions, current_suggestions = [], 0, []
     BUILTIN = {
-        "actions":       cmd_actions,
-        "history":       cmd_history,
-        "sessions":      cmd_sessions,
-        "logs":          cmd_logs,
-        "errors":        cmd_errors,
-        "config":        cmd_config,
-        "reload":        cmd_reload,
-        "stats":         cmd_stats,
-        "aliases":       cmd_aliases,
-        "jobs":          cmd_jobs,
-        "keybinds":      cmd_keybinds,
-        "memory":        lambda: print_venty(list_notes()),
-        "clear memory":  lambda: print_venty(clear_notes()),
-        "clear history": cmd_clear_history,
-        "clear logs":    cmd_clear_logs,
-        "clear cache":   cmd_clear_cache,
-        "plugins":       cmd_plugins,
-        "help":          cmd_help,
+        "actions": cmd_actions, "history": cmd_history, "sessions": cmd_sessions, "logs": cmd_logs,
+        "errors": cmd_errors, "config": cmd_config, "reload": cmd_reload, "stats": cmd_stats,
+        "aliases": cmd_aliases, "jobs": cmd_jobs, "keybinds": cmd_keybinds,
+        "memory": lambda: print_venty(list_notes()), "clear memory": lambda: print_venty(clear_notes()),
+        "clear history": cmd_clear_history, "clear logs": cmd_clear_logs, "clear cache": cmd_clear_cache,
+        "plugins": cmd_plugins, "help": cmd_help,
     }
-
     while True:
-        # tick scheduler
         if _HAS_CORE:
             try:
                 ran = _scheduler_tick(execute_action, ACTIONS, CONFIG)
-                for label, action, args, success, output in ran:
+                for action, args, output in ran:
                     print_separator()
-                    print_info(f"[scheduler] {label}")
+                    print_info(f"[scheduler] {action}")
                     print_action(action, args)
-                    if success:
-                        print_success("done")
-                        if output and CONFIG.get("show_output", True):
-                            print_output(str(output)[:300])
-                    else:
-                        print_error(f"failed: {output}")
-            except Exception:
-                pass
-
+                    if output and CONFIG.get("show_output", True): print_output(str(output)[:300])
+            except: pass
         try:
-            user_input = input(f"\n{_c('user')}{Colors.BOLD}you >{Colors.RESET} ").strip()
-        except (KeyboardInterrupt, EOFError):
+            if current_suggestions:
+                user_input = input(f"\n{_c('user')}{Colors.BOLD}you >{Colors.RESET} ").strip()
+                if user_input.isdigit():
+                    idx = int(user_input) - 1
+                    if 0 <= idx < len(current_suggestions):
+                        user_input = current_suggestions[idx]
+                        print(f"{_c('user')}{Colors.BOLD}selected >{Colors.RESET} {user_input}")
+                current_suggestions = []
+            else: user_input = input(f"\n{_c('user')}{Colors.BOLD}you >{Colors.RESET} ").strip()
+        except:
             save_history(conversation_history)
-            if _HAS_CORE:
-                log_session_end(len(conversation_history) // 2, session_actions)
+            if _HAS_CORE: log_session_end(len(conversation_history) // 2, session_actions)
             print_venty("goodbye")
-            logger.info("Venty exited")
             break
-
-        if not user_input:
-            continue
-
-        # resolve alias
+        if not user_input: continue
         user_input = resolve_alias(user_input)
-
         if user_input.lower() in ["exit", "quit", "bye"]:
             save_history(conversation_history)
-            if _HAS_CORE:
-                log_session_end(len(conversation_history) // 2, session_actions)
+            if _HAS_CORE: log_session_end(len(conversation_history) // 2, session_actions)
             print_venty("goodbye")
-            logger.info("Venty exited")
             break
-
         if user_input.lower() == "clear":
             save_history(conversation_history)
             conversation_history = []
@@ -1166,39 +897,29 @@ def main():
             print_separator()
             print_venty("memory cleared")
             continue
-
         if user_input.lower().startswith("set "):
             cmd_set(user_input[4:])
             continue
-
         if user_input.lower() == "reload plugins":
             n = reload_plugins()
             print_success(f"reloaded plugins — {n} plugin actions, {len(ACTIONS)} total actions")
             continue
-
-        # ── remember / forget shortcuts ───────────────────────
         if user_input.lower().startswith("remember "):
-            text = user_input[9:].strip()
-            print_venty(remember(text))
+            print_venty(remember(user_input[9:].strip()))
             continue
-
         if user_input.lower().startswith("forget "):
-            text = user_input[7:].strip()
-            print_venty(forget(text))
+            print_venty(forget(user_input[7:].strip()))
             continue
-
         if user_input.lower().startswith("alias "):
             args_str = user_input[6:]
-            if "=" not in args_str:
-                print_error("usage: alias <name> = <expansion>")
+            if "=" not in args_str: print_error("usage: alias <name> = <expansion>")
             else:
                 name, expansion = args_str.split("=", 1)
                 aliases = _load_aliases()
                 aliases[name.strip()] = expansion.strip()
                 _save_aliases(aliases)
-                print_success(f"alias '{name.strip()}' -> '{expansion.strip()}'")
+                print_success(f"alias '{name.strip()}' added")
             continue
-
         if user_input.lower().startswith("unalias "):
             name = user_input[8:].strip()
             aliases = _load_aliases()
@@ -1206,95 +927,52 @@ def main():
                 del aliases[name]
                 _save_aliases(aliases)
                 print_success(f"removed alias '{name}'")
-            else:
-                print_error(f"alias '{name}' not found")
             continue
-
         if user_input.lower().startswith("cancel "):
             if _HAS_CORE:
                 job_id = user_input[7:].strip()
-                if cancel_job(job_id):
-                    print_success(f"cancelled job {job_id}")
-                else:
-                    print_error(f"job '{job_id}' not found")
-            else:
-                print_error("scheduler module not available")
+                if cancel_job(job_id): print_success(f"cancelled job {job_id}")
             continue
-
         if user_input.lower() in BUILTIN:
             BUILTIN[user_input.lower()]()
             continue
-
-        if not CONFIG.get("api_key"):
-            print_error("no API key — run setup.py first")
-            continue
-
-        # trim session to avoid token overflow
-        max_turns = CONFIG.get("max_session_turns", 40)
-        conversation_history = trim_session(conversation_history, max_turns)
-
+        if not CONFIG.get("api_key"): continue
+        conversation_history = trim_session(conversation_history, CONFIG.get("max_session_turns", 40))
         raw = ask_venty(user_input, conversation_history)
         print("\r" + " " * 20 + "\r", end="")
-
-        if raw is None:
-            print_error("could not reach Venty AI — check your connection or run setup.py")
-            continue
-
+        if raw is None: continue
         parsed = parse_response(raw)
-
         if parsed is None:
             print_venty(raw)
             continue
-
-        action  = parsed.get("action",  "none")
-        args    = parsed.get("args",    [])
-        message = parsed.get("message", "done")
-
-        # ── task_plan: multi-step execution ───────────────────
+        action, args, message = parsed.get("action", "none"), parsed.get("args", []), parsed.get("message", "done")
         if action == "task_plan":
             handle_task_plan(parsed)
             session_actions += len(parsed.get("steps", []))
+            current_suggestions = show_suggestions(parsed.get("suggestions", []))
             print_separator()
             continue
-
         print_separator()
         print_venty(message)
-
         if action == "cannot_do":
-            low = user_input.lower()
-            if any(w in low for w in ("open", "website", "browser", "chrome", "google", "url", "go to", "visit")):
-                print_info("try: open https://google.com in chrome  (actions: web_open_chrome, web_go, os_open_url)")
-            else:
-                print_warning("this action is outside my capabilities")
-            logger.info(f"cannot_do: {user_input}")
-
+            if any(w in user_input.lower() for w in ("open", "website", "browser")):
+                print_info("try: web_open_chrome <url>")
         elif action == "loop_start":
-            print_action("loop_start", args)
             handle_loop(args)
             session_actions += 1
-
         elif action in ("memory_remember", "memory_forget", "memory_list", "memory_clear"):
-            print_action(action, args)
             success, output = execute_action(action, args)
             session_actions += 1
-            if success and output:
-                print_info(output)
-            elif not success:
-                print_error(f"failed: {output}")
-
+            if success and output: print_info(output)
         elif action and action != "none":
-            print_action(action, args)
             success, output = execute_action(action, args)
             session_actions += 1
             if success:
                 print_success("done")
-                if output and CONFIG.get("show_output", True):
-                    print(f"\n{Colors.GRAY}{output}{Colors.RESET}")
-            else:
-                print_error(f"failed: {output}")
-
+                if output and CONFIG.get("show_output", True): print(f"\n{Colors.GRAY}{output}{Colors.RESET}")
+            else: print_error(f"failed: {output}")
+        current_suggestions = show_suggestions(parsed.get("suggestions", []))
         print_separator()
-
 
 if __name__ == "__main__":
     main()

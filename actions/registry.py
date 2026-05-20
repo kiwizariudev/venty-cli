@@ -1,12 +1,7 @@
-"""
-actions/registry.py — Windows registry operations
-"""
 import subprocess
-
 
 def _run(args):
     return subprocess.run(args, capture_output=True, text=True)
-
 
 ACTIONS = {
     "os_reg_read": {

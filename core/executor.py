@@ -1,31 +1,17 @@
-"""
-core/executor.py — action execution engine and loop handler
-"""
 import os
 import time
-
 from core.logger  import get_logger
 from core.history import log_action
 from core.paths   import SANDBOX_DIR
 
 logger = get_logger()
 
-
 def resolve_path(path: str, working_dir: str) -> str:
-    """
-    If path is relative, resolve it against working_dir.
-    Absolute paths are returned unchanged.
-    """
     if os.path.isabs(path):
         return path
     return os.path.join(working_dir, path)
 
-
 def _resolve_args(action_name: str, args: list, working_dir: str) -> list:
-    """
-    For file/compile/run actions, auto-resolve the first arg (path) to absolute.
-    Skips URL args and non-path args.
-    """
     PATH_ACTIONS = {
         "os_create_file", "os_write_file", "os_append_file", "os_read_file",
         "os_read_file_lines", "os_delete_file", "os_rename_file", "os_copy_file",
@@ -41,22 +27,19 @@ def _resolve_args(action_name: str, args: list, working_dir: str) -> list:
         "os_run_node", "os_run_batch", "os_run_powershell_script",
         "os_pip_install_req", "os_pip_freeze", "os_reg_export",
         "os_make_shortcut", "os_find_duplicates", "os_disk_usage",
+        "os_run_rust", "os_run_go", "os_go_build", "os_run_ruby", "os_run_php",
+        "tool_format_json", "tool_zip", "tool_unzip", "tool_http_server"
     }
     if action_name not in PATH_ACTIONS or not args:
         return args
 
     resolved = list(args)
     first = resolved[0]
-    # don't touch URLs or already-absolute paths
     if not first.startswith("http") and not os.path.isabs(first):
         resolved[0] = resolve_path(first, working_dir)
     return resolved
 
-
 def execute_action(action_name: str, args: list, actions: dict, cfg: dict) -> tuple[bool, str | None]:
-    """
-    Execute a single action. Returns (success, output_string).
-    """
     if action_name not in actions:
         return False, f"unknown action: {action_name}"
 
@@ -72,32 +55,23 @@ def execute_action(action_name: str, args: list, actions: dict, cfg: dict) -> tu
         log_action(action_name, resolved, True, output)
         logger.info(f"executed: {action_name} {resolved}")
         return True, output
-
     except FileNotFoundError as e:
         log_action(action_name, resolved, False, str(e))
         logger.error(f"FileNotFound: {action_name} — {e}")
         return False, f"file not found: {e}"
-
     except PermissionError:
         log_action(action_name, resolved, False, "PermissionError")
         logger.error(f"PermissionError: {action_name}")
         return False, "permission denied — try running as administrator"
-
     except Exception as e:
         log_action(action_name, resolved, False, str(e))
         logger.error(f"failed: {action_name} — {e}")
         return False, str(e)
 
-
 def handle_loop(args: list, actions: dict, cfg: dict, ui) -> None:
-    """
-    Execute loop_start: repeat an action N times.
-    ui is the UI module (for print helpers).
-    """
     if len(args) < 2:
         ui.print_error("loop needs at least: count action_name")
         return
-
     try:
         count = int(args[0])
     except ValueError:

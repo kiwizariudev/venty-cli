@@ -1,16 +1,10 @@
-"""
-actions/compile.py — compile and run code (gcc, g++, python, node, java, etc.)
-"""
 import subprocess
-
 
 def _run(cmd, **kwargs):
     return subprocess.run(cmd, shell=True, capture_output=True, text=True, **kwargs)
 
-
 def _popen(cmd):
     return subprocess.Popen(cmd, shell=True)
-
 
 ACTIONS = {
     "os_run_command": {
@@ -102,27 +96,43 @@ ACTIONS = {
         "execute": lambda a: _run("pip list"),
     },
     "os_pip_freeze": {
-        "description": "Export pip freeze to file, args = [output_file]",
-        "execute": lambda a: _run(f'pip freeze > "{a[0]}"'),
+        "description": "Freeze python packages to requirements format",
+        "execute": lambda a: _run("pip freeze"),
     },
     "os_npm_install": {
-        "description": "npm install in a folder, args = [folder_path]",
+        "description": "Install npm packages, args = [folder_path]",
         "execute": lambda a: _run(f'cd /d "{a[0]}" && npm install'),
-    },
-    "os_npm_install_pkg": {
-        "description": "npm install a package, args = [folder_path, package]",
-        "execute": lambda a: _run(f'cd /d "{a[0]}" && npm install {a[1]}'),
-    },
-    "os_npm_run": {
-        "description": "Run npm script, args = [folder_path, script_name]",
-        "execute": lambda a: _run(f'cd /d "{a[0]}" && npm run {a[1]}'),
-    },
-    "os_npm_build": {
-        "description": "npm build, args = [folder_path]",
-        "execute": lambda a: _run(f'cd /d "{a[0]}" && npm run build'),
     },
     "os_npm_list": {
         "description": "List npm packages, args = [folder_path]",
         "execute": lambda a: _run(f'cd /d "{a[0]}" && npm list'),
+    },
+    "os_run_rust": {
+        "description": "Run rust file using rustc, args = [file.rs]",
+        "execute": lambda a: _run(f'rustc "{a[0]}" && "{a[0].replace(".rs", ".exe")}"'),
+    },
+    "os_cargo_run": {
+        "description": "Run cargo project, args = [folder_path]",
+        "execute": lambda a: _run(f'cd /d "{a[0]}" && cargo run'),
+    },
+    "os_cargo_build": {
+        "description": "Build cargo project, args = [folder_path]",
+        "execute": lambda a: _run(f'cd /d "{a[0]}" && cargo build'),
+    },
+    "os_run_go": {
+        "description": "Run go file, args = [file.go]",
+        "execute": lambda a: _run(f'go run "{a[0]}"'),
+    },
+    "os_go_build": {
+        "description": "Build go file, args = [file.go, output]",
+        "execute": lambda a: _run(f'go build -o "{a[1]}" "{a[0]}"'),
+    },
+    "os_run_ruby": {
+        "description": "Run ruby script, args = [file.rb]",
+        "execute": lambda a: _run(f'ruby "{a[0]}"'),
+    },
+    "os_run_php": {
+        "description": "Run php script, args = [file.php]",
+        "execute": lambda a: _run(f'php "{a[0]}"'),
     },
 }

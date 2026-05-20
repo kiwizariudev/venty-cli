@@ -1,6 +1,3 @@
-"""
-core/agent.py — LLM communication, JSON extraction, retry logic
-"""
 import json
 import time
 import requests as _requests
@@ -10,23 +7,20 @@ from core.jsonutil import extract_first_json as _extract_first_json
 
 logger = get_logger()
 
-
 def build_messages(system_prompt: str, history: list) -> list:
     return [{"role": "system", "content": system_prompt}] + history
 
-
 def ask(user_input: str, conversation_history: list, cfg: dict, system_prompt: str) -> str | None:
-    """
-    Send user_input to the LLM and return the raw response string.
-    Retries up to 3 times on invalid JSON, injecting a correction message.
-    Returns None on connection failure.
-    """
     conversation_history.append({"role": "user", "content": user_input})
     logger.info(f"User: {user_input}")
 
     api_key = cfg.get("api_key", "")
     url     = cfg.get("url",     "")
     model   = cfg.get("model",   "")
+
+    if not api_key or not url:
+        logger.error("API Key or URL missing in config")
+        return None
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -49,17 +43,27 @@ def ask(user_input: str, conversation_history: list, cfg: dict, system_prompt: s
                 url, headers=headers, json=payload,
                 timeout=cfg.get("timeout", 60)
             )
-            resp.raise_for_status()
-            raw      = resp.json()["choices"][0]["message"]["content"].strip()
+            
+            if resp.status_code != 200:
+                logger.error(f"API Error {resp.status_code}: {resp.text}")
+                if attempt < 2:
+                    time.sleep(2)
+                    continue
+                return None
+
+            resp_json = resp.json()
+            if "choices" not in resp_json or not resp_json["choices"]:
+                logger.error(f"Unexpected API response format: {resp_json}")
+                return None
+
+            raw      = resp_json["choices"][0]["message"]["content"].strip()
             last_raw = raw
 
-            # validate JSON before accepting
             if _extract_first_json(raw) is not None:
                 conversation_history.append({"role": "assistant", "content": raw})
                 logger.info(f"Venty: {raw[:100]}")
                 return raw
 
-            # invalid JSON — inject correction without polluting history with bad turn
             logger.warning(f"Invalid JSON attempt {attempt + 1}: {raw[:80]}")
             if attempt < 2:
                 conversation_history.append({"role": "assistant", "content": raw})
@@ -81,14 +85,13 @@ def ask(user_input: str, conversation_history: list, cfg: dict, system_prompt: s
             return None
 
     logger.error("All 3 attempts failed")
-    return last_raw  # return whatever we got so the caller can display it
+    return last_raw
 
 
 def parse_response(raw: str) -> dict | None:
     return _extract_first_json(raw)
 
 
-# re-export for callers
 extract_first_json = _extract_first_json
 
 

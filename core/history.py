@@ -1,17 +1,10 @@
-"""
-core/history.py — conversation history and action cache management
-"""
 import os
 import json
 import datetime
-
 from core.paths import HISTORY_PATH, CACHE_PATH, MEMORY_DIR, CACHE_DIR
 
 os.makedirs(MEMORY_DIR, exist_ok=True)
 os.makedirs(CACHE_DIR, exist_ok=True)
-
-
-# ── Conversation history ──────────────────────────────────────────────────────
 
 def load_history() -> list:
     if not os.path.exists(HISTORY_PATH):
@@ -22,9 +15,7 @@ def load_history() -> list:
     except Exception:
         return []
 
-
 def save_history(session: list, max_entries: int = 100) -> None:
-    """Merge session turns into the persisted history, keeping last max_entries."""
     try:
         existing = load_history()
         existing.extend(session)
@@ -35,23 +26,14 @@ def save_history(session: list, max_entries: int = 100) -> None:
     except Exception:
         pass
 
-
 def clear_history() -> None:
     if os.path.exists(HISTORY_PATH):
         os.remove(HISTORY_PATH)
 
-
 def trim_session(session: list, max_turns: int) -> list:
-    """
-    Keep only the last max_turns user+assistant pairs in the in-memory session
-    so the context sent to the API never explodes.
-    """
     if len(session) <= max_turns * 2:
         return session
     return session[-(max_turns * 2):]
-
-
-# ── Action cache ──────────────────────────────────────────────────────────────
 
 def log_action(action: str, args: list, success: bool, output=None) -> None:
     try:
@@ -72,7 +54,6 @@ def log_action(action: str, args: list, success: bool, output=None) -> None:
     except Exception:
         pass
 
-
 def load_cache() -> list:
     if not os.path.exists(CACHE_PATH):
         return []
@@ -82,11 +63,9 @@ def load_cache() -> list:
     except Exception:
         return []
 
-
 def clear_cache() -> None:
     if os.path.exists(CACHE_PATH):
         os.remove(CACHE_PATH)
-
 
 def get_stats() -> dict:
     data    = load_cache()
@@ -98,8 +77,7 @@ def get_stats() -> dict:
         counts[a] = counts.get(a, 0) + 1
     top = sorted(counts.items(), key=lambda x: x[1], reverse=True)[:10]
     return {
-        "total":   total,
+        "total": total,
         "success": success,
-        "failed":  total - success,
-        "top":     top,
+        "top_actions": top
     }

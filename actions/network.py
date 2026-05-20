@@ -1,21 +1,14 @@
-"""
-actions/network.py — network diagnostics and connectivity
-"""
 import subprocess
 import socket
-
 
 def _run(cmd):
     return subprocess.run(cmd, shell=True, capture_output=True, text=True)
 
-
 def _runl(args):
     return subprocess.run(args, capture_output=True, text=True)
 
-
 def _stdout(text):
     return type("R", (), {"stdout": str(text)})()
-
 
 ACTIONS = {
     "os_ip_info": {
@@ -97,9 +90,5 @@ ACTIONS = {
     "os_ipconfig_renew": {
         "description": "Renew IP address",
         "execute": lambda a: _runl(["ipconfig", "/renew"]),
-    },
-    "os_download_file": {
-        "description": "Download a file from URL, args = [url, output_path]",
-        "execute": lambda a: _run(f'powershell Invoke-WebRequest -Uri "{a[0]}" -OutFile "{a[1]}"'),
     },
 }

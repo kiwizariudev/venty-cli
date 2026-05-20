@@ -1,17 +1,11 @@
-"""
-core/memory.py — persistent notes/facts that survive across sessions.
-Stored in memory/notes.json and injected into every system prompt.
-"""
 import os
 import json
 import datetime
-
 from core.paths import NOTES_PATH, MEMORY_DIR
 
 os.makedirs(MEMORY_DIR, exist_ok=True)
 
 _SCHEMA = {"facts": [], "preferences": [], "projects": []}
-
 
 def _load() -> dict:
     if not os.path.exists(NOTES_PATH):
@@ -27,15 +21,12 @@ def _load() -> dict:
     except Exception:
         return _SCHEMA.copy()
 
-
 def _save(data: dict) -> None:
     os.makedirs(os.path.dirname(NOTES_PATH), exist_ok=True)
     with open(NOTES_PATH, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-
 def remember(text: str, category: str = "facts") -> str:
-    """Add a note. category = facts | preferences | projects"""
     data = _load()
     if category not in data:
         data[category] = []
@@ -44,9 +35,7 @@ def remember(text: str, category: str = "facts") -> str:
     _save(data)
     return f"Remembered: {text}"
 
-
 def forget(text: str) -> str:
-    """Remove a note containing text (partial match)."""
     data = _load()
     removed = 0
     for cat in data:
@@ -56,9 +45,7 @@ def forget(text: str) -> str:
     _save(data)
     return f"Removed {removed} note(s) matching '{text}'"
 
-
 def list_notes() -> str:
-    """Return all notes as a formatted string."""
     data = _load()
     lines = []
     for cat, entries in data.items():
@@ -68,14 +55,11 @@ def list_notes() -> str:
                 lines.append(f"  • {e['text']}  ({e.get('added', '')})")
     return "\n".join(lines) if lines else "No notes saved yet."
 
-
 def clear_notes() -> str:
     _save(_SCHEMA.copy())
     return "All notes cleared."
 
-
 def get_memory_block() -> str:
-    """Return a compact block to inject into the system prompt."""
     data = _load()
     lines = []
     for cat, entries in data.items():

@@ -1,24 +1,17 @@
-"""
-actions/system.py — system information (CPU, RAM, GPU, disk, env vars, etc.)
-"""
 import os
 import platform
 import subprocess
 import datetime
 import time
 
-
 def _run(cmd):
     return subprocess.run(cmd, shell=True, capture_output=True, text=True)
-
 
 def _runl(args):
     return subprocess.run(args, capture_output=True, text=True)
 
-
 def _stdout(text):
     return type("R", (), {"stdout": str(text)})()
-
 
 ACTIONS = {
     "os_disk_info": {
@@ -99,26 +92,10 @@ ACTIONS = {
     },
     "os_motherboard_info": {
         "description": "Get motherboard info",
-        "execute": lambda a: _runl(["wmic", "baseboard", "get", "product,manufacturer,version"]),
+        "execute": lambda a: _runl(["wmic", "baseboard", "get", "product,Manufacturer,version,serialnumber"]),
     },
     "os_bios_info": {
         "description": "Get BIOS info",
-        "execute": lambda a: _runl(["wmic", "bios", "get", "smbiosbiosversion,manufacturer,releasedate"]),
-    },
-    "os_get_time": {
-        "description": "Get current date and time",
-        "execute": lambda a: _stdout(datetime.datetime.now().strftime("%A %d %B %Y  %H:%M:%S")),
-    },
-    "os_get_timestamp": {
-        "description": "Get Unix timestamp",
-        "execute": lambda a: _stdout(str(int(time.time()))),
-    },
-    "os_set_timer": {
-        "description": "Wait N seconds, args = [seconds]",
-        "execute": lambda a: [time.sleep(int(a[0])), _stdout(f"Timer done after {a[0]}s")][-1],
-    },
-    "os_sync_time": {
-        "description": "Sync system time with NTP",
-        "execute": lambda a: _runl(["w32tm", "/resync"]),
+        "execute": lambda a: _runl(["wmic", "bios", "get", "name,version,serialnumber"]),
     },
 }

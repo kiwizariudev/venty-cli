@@ -1,27 +1,19 @@
-"""
-core/plugins.py — discover, validate, and load plugins from extensions/plugins/
-"""
 from __future__ import annotations
-
 import importlib.util
 import json
 import os
 import sys
 from typing import Any
-
 from core.paths import PLUGINS_DIR, CACHE_DIR
 
 _REGISTRY: list[dict] = []
 _ERRORS: list[dict] = []
 
-
 def get_registry() -> list[dict]:
     return list(_REGISTRY)
 
-
 def get_load_errors() -> list[dict]:
     return list(_ERRORS)
-
 
 def _validate_actions(actions: Any, source: str) -> dict | None:
     if not isinstance(actions, dict) or not actions:
@@ -43,7 +35,6 @@ def _validate_actions(actions: Any, source: str) -> dict | None:
         }
     return clean or None
 
-
 def _load_module(path: str, module_name: str):
     spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:
@@ -52,7 +43,6 @@ def _load_module(path: str, module_name: str):
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
-
 
 def _load_file(path: str, plugin_id: str) -> tuple[dict, dict | None]:
     mod = _load_module(path, f"venty_plugin.{plugin_id}")
@@ -77,9 +67,7 @@ def _load_file(path: str, plugin_id: str) -> tuple[dict, dict | None]:
         v["plugin"] = info["id"]
     return actions, info
 
-
 def _discover_files(plugins_dir: str) -> list[tuple[str, str]]:
-    """Return list of (path, plugin_id)."""
     found: list[tuple[str, str]] = []
     if not os.path.isdir(plugins_dir):
         return found
@@ -100,62 +88,29 @@ def _discover_files(plugins_dir: str) -> list[tuple[str, str]]:
                     break
     return found
 
-
-def load_all_plugins(plugins_dir: str | None = None) -> tuple[dict, list[dict]]:
-    """
-    Load every plugin. Returns (actions_dict, registry_list).
-  """
+def load_all_plugins(plugins_dir: str = PLUGINS_DIR, disabled: list[str] | None = None) -> tuple[dict, list[dict]]:
     global _REGISTRY, _ERRORS
-    plugins_dir = plugins_dir or PLUGINS_DIR
-    merged: dict = {}
-    registry: list[dict] = []
-    errors: list[dict] = []
+    _REGISTRY = []
+    _ERRORS = []
+    all_actions = {}
+    disabled = disabled or []
 
-    # ensure project root importable inside plugins
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    if root not in sys.path:
-        sys.path.insert(0, root)
-
-    for path, plugin_id in _discover_files(plugins_dir):
+    for path, pid in _discover_files(plugins_dir):
+        if pid in disabled or f"{pid}.py" in disabled:
+            continue
         try:
-            actions, info = _load_file(path, plugin_id)
-            overlap = set(merged) & set(actions)
-            if overlap:
-                raise ValueError(f"action names already exist: {', '.join(sorted(overlap)[:5])}")
-            merged.update(actions)
-            registry.append(info)
+            actions, info = _load_file(path, pid)
+            all_actions.update(actions)
+            _REGISTRY.append(info)
         except Exception as e:
-            errors.append({"id": plugin_id, "path": path, "error": str(e)})
+            _ERRORS.append({"id": pid, "path": path, "error": str(e)})
 
-    _REGISTRY = registry
-    _ERRORS = errors
-    _save_registry_cache(registry, errors)
-    return merged, registry
+    return all_actions, _REGISTRY
 
-
-def _save_registry_cache(registry: list, errors: list) -> None:
-    try:
-        os.makedirs(CACHE_DIR, exist_ok=True)
-        path = os.path.join(CACHE_DIR, "plugins_registry.json")
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"plugins": registry, "errors": errors}, f, indent=2)
-    except Exception:
-        pass
-
-
-def format_plugins_for_prompt(registry: list[dict] | None = None) -> str:
-    """Short block injected into system prompt."""
-    registry = registry or _REGISTRY
+def format_plugins_for_prompt(registry: list[dict]) -> str:
     if not registry:
         return ""
-    lines = ["INSTALLED PLUGINS (use these action names — never cannot_do for browser/web):"]
+    lines = ["PLUGINS (additional actions available):"]
     for p in registry:
-        acts = ", ".join(p.get("actions", [])[:8])
-        if len(p.get("actions", [])) > 8:
-            acts += ", …"
-        lines.append(f"- {p['name']} ({p['id']}): {acts}")
-    lines.append(
-        "For 'open website' / 'go to google' / browser: use web_open_chrome, web_open_url, "
-        "os_open_chrome, or web_search — NOT cannot_do."
-    )
+        lines.append(f"  - {p['name']} v{p['version']} ({p['id']}): {p['description']}")
     return "\n".join(lines)

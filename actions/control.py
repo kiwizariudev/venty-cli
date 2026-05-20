@@ -1,7 +1,3 @@
-"""
-actions/control.py — meta-actions (loop, none, cannot_do)
-"""
-
 ACTIONS = {
     "loop_start": {
         "description": "Repeat an action N times, args = [count, action_name, ...action_args]",

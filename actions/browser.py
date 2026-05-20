@@ -1,14 +1,9 @@
-"""
-actions/browser.py — open URLs in default or named browsers (Windows).
-"""
 import os
 import subprocess
 import webbrowser
 
-
 def _stdout(text):
     return type("R", (), {"stdout": str(text)})()
-
 
 def _normalize_url(url: str) -> str:
     url = (url or "").strip().strip('"').strip("'")
@@ -18,7 +13,6 @@ def _normalize_url(url: str) -> str:
         url = "https://" + url
     return url
 
-
 def _chrome_paths():
     local = os.environ.get("LOCALAPPDATA", "")
     return [
@@ -27,20 +21,17 @@ def _chrome_paths():
         os.path.join(local, "Google", "Chrome", "Application", "chrome.exe"),
     ]
 
-
 def _edge_paths():
     return [
         os.path.expandvars(r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"),
         os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"),
     ]
 
-
 def _firefox_paths():
     return [
         os.path.expandvars(r"%ProgramFiles%\Mozilla Firefox\firefox.exe"),
         os.path.expandvars(r"%ProgramFiles(x86)%\Mozilla Firefox\firefox.exe"),
     ]
-
 
 def _launch_exe(paths: list, url: str) -> bool:
     for exe in paths:
@@ -49,15 +40,13 @@ def _launch_exe(paths: list, url: str) -> bool:
             return True
     return False
 
-
 def open_url(url: str, browser: str = "default"):
-    """Open URL in default or named browser: default, chrome, edge, firefox."""
     url = _normalize_url(url)
     name = (browser or "default").lower().strip()
 
     if name in ("default", "browser", ""):
         if os.name == "nt":
-            os.startfile(url)  # noqa: S606 — Windows default handler
+            os.startfile(url)
         else:
             webbrowser.open(url)
         return _stdout(f"Opened in default browser: {url}")
@@ -80,7 +69,6 @@ def open_url(url: str, browser: str = "default"):
         subprocess.Popen(f'cmd /c start firefox "{url}"', shell=True)
         return _stdout(f"Opened in Firefox: {url}")
 
-    # webbrowser registry name
     try:
         webbrowser.get(name).open(url)
         return _stdout(f"Opened in {name}: {url}")
@@ -89,7 +77,6 @@ def open_url(url: str, browser: str = "default"):
             os.startfile(url)
             return _stdout(f"Browser '{name}' not found — opened with default: {url}")
         raise
-
 
 ACTIONS = {
     "os_open_url": {
@@ -100,15 +87,15 @@ ACTIONS = {
         "description": "Open URL in a specific browser, args = [url, chrome|edge|firefox|default]",
         "execute": lambda a: open_url(a[0], a[1] if len(a) > 1 else "default"),
     },
-    "os_open_chrome": {
-        "description": "Open URL in Google Chrome, args = [url]",
+    "web_open_chrome": {
+        "description": "Open URL in Chrome, args = [url]",
         "execute": lambda a: open_url(a[0], "chrome"),
     },
-    "os_open_edge": {
+    "web_open_edge": {
         "description": "Open URL in Microsoft Edge, args = [url]",
         "execute": lambda a: open_url(a[0], "edge"),
     },
-    "os_open_firefox": {
+    "web_open_firefox": {
         "description": "Open URL in Firefox, args = [url]",
         "execute": lambda a: open_url(a[0], "firefox"),
     },

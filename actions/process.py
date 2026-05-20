@@ -1,20 +1,13 @@
-"""
-actions/process.py — process and service management
-"""
 import subprocess
-
 
 def _run(*args, **kwargs):
     return subprocess.run(list(args[0]), capture_output=True, text=True, **kwargs)
 
-
 def _popen(cmd, **kwargs):
     return subprocess.Popen(cmd, shell=True, **kwargs)
 
-
 def _stdout(text):
     return type("R", (), {"stdout": str(text)})()
-
 
 ACTIONS = {
     "os_close": {

@@ -1,9 +1,5 @@
-"""
-core/tasks.py — multi-step task_plan execution.
-"""
 import time
 from typing import Callable
-
 
 def run_task_plan(
     parsed: dict,
@@ -13,12 +9,6 @@ def run_task_plan(
     depth: int = 0,
     max_depth: int = 8,
 ) -> bool:
-    """
-    Run a task_plan dict. execute_fn(action, args) -> (success, output).
-    ui must provide print_venty, print_separator, print_info, print_action,
-    print_success, print_error, print_warning, print_output, and Colors.
-    Returns True if completed (or user aborted intentionally).
-    """
     if depth > max_depth:
         ui.print_error("task plan nested too deeply — aborted")
         return False
@@ -46,7 +36,7 @@ def run_task_plan(
             args = [str(args)] if args else []
 
         prefix = "  " * depth
-        ui.print_info(f"{prefix}[{i}/{len(steps)}] {action}")
+        ui.print_step(i, len(steps), action)
         ui.print_action(action, args)
 
         if action in ("none", "cannot_do"):

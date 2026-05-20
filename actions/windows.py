@@ -1,81 +1,55 @@
-"""
-actions/windows.py — Windows UI, settings panels, and built-in tools
-"""
 import subprocess
-
 
 def _popen(cmd):
     return subprocess.Popen(cmd, shell=True)
 
-
 def _run(cmd):
     return subprocess.run(cmd, shell=True, capture_output=True, text=True)
 
-
 ACTIONS = {
-    "os_task_manager":        {"description": "Open task manager",           "execute": lambda a: _popen("taskmgr")},
-    "os_open_control_panel":  {"description": "Open control panel",          "execute": lambda a: _popen("control")},
-    "os_open_device_manager": {"description": "Open device manager",         "execute": lambda a: _popen("devmgmt.msc")},
-    "os_open_disk_manager":   {"description": "Open disk management",        "execute": lambda a: _popen("diskmgmt.msc")},
-    "os_open_services":       {"description": "Open Windows services",       "execute": lambda a: _popen("services.msc")},
-    "os_open_event_viewer":   {"description": "Open event viewer",           "execute": lambda a: _popen("eventvwr.msc")},
-    "os_open_registry":       {"description": "Open registry editor",        "execute": lambda a: _popen("regedit")},
-    "os_open_cmd":            {"description": "Open new cmd window",         "execute": lambda a: _popen("start cmd")},
-    "os_open_cmd_admin":      {"description": "Open cmd as admin",           "execute": lambda a: _run("powershell Start-Process cmd -Verb RunAs")},
-    "os_open_powershell":     {"description": "Open PowerShell",             "execute": lambda a: _popen("start powershell")},
-    "os_open_powershell_admin": {"description": "Open PowerShell as admin",  "execute": lambda a: _run("powershell Start-Process powershell -Verb RunAs")},
-    "os_open_settings":       {"description": "Open Windows settings",       "execute": lambda a: _popen("start ms-settings:")},
-    "os_open_calculator":     {"description": "Open calculator",             "execute": lambda a: _popen("calc")},
-    "os_open_notepad": {
-        "description": "Open notepad, args = [filepath] or []",
-        "execute": lambda a: _popen(f"notepad {a[0] if a else ''}"),
-    },
-    "os_open_paint":          {"description": "Open MS Paint",               "execute": lambda a: _popen("mspaint")},
-    "os_open_wordpad":        {"description": "Open WordPad",                "execute": lambda a: _popen("wordpad")},
+    "os_task_manager":        {"description": "Open task manager", "execute": lambda a: _popen("taskmgr")},
+    "os_open_control_panel":  {"description": "Open control panel", "execute": lambda a: _popen("control")},
+    "os_open_device_manager": {"description": "Open device manager", "execute": lambda a: _popen("devmgmt.msc")},
+    "os_open_disk_manager":   {"description": "Open disk management", "execute": lambda a: _popen("diskmgmt.msc")},
+    "os_open_services":       {"description": "Open Windows services", "execute": lambda a: _popen("services.msc")},
+    "os_open_event_viewer":   {"description": "Open event viewer", "execute": lambda a: _popen("eventvwr.msc")},
+    "os_open_registry":       {"description": "Open registry editor", "execute": lambda a: _popen("regedit")},
+    "os_open_cmd":            {"description": "Open new cmd window", "execute": lambda a: _popen("start cmd")},
+    "os_open_cmd_admin":      {"description": "Open cmd as admin", "execute": lambda a: _run("powershell Start-Process cmd -Verb RunAs")},
+    "os_open_powershell":     {"description": "Open PowerShell", "execute": lambda a: _popen("start powershell")},
+    "os_open_powershell_admin": {"description": "Open PowerShell as admin", "execute": lambda a: _run("powershell Start-Process powershell -Verb RunAs")},
+    "os_open_settings":       {"description": "Open Windows settings", "execute": lambda a: _popen("start ms-settings:")},
+    "os_open_calculator":     {"description": "Open calculator", "execute": lambda a: _popen("calc")},
+    "os_open_notepad":        {"description": "Open notepad, args = [filepath]", "execute": lambda a: _popen(f"notepad {a[0] if a else ''}")},
+    "os_open_paint":          {"description": "Open MS Paint", "execute": lambda a: _popen("mspaint")},
+    "os_open_wordpad":        {"description": "Open WordPad", "execute": lambda a: _popen("wordpad")},
     "os_open_winver":         {"description": "Show Windows version dialog", "execute": lambda a: _popen("winver")},
-    "os_sfc_scan":            {"description": "Run system file checker",     "execute": lambda a: subprocess.run(["sfc", "/scannow"], capture_output=True, text=True)},
-    "os_chkdsk": {
-        "description": "Run chkdsk, args = [drive like C:]",
-        "execute": lambda a: subprocess.run(["chkdsk", a[0] if a else "C:"], capture_output=True, text=True),
-    },
-    "os_windows_update":      {"description": "Open Windows Update",         "execute": lambda a: _popen("start ms-settings:windowsupdate")},
-    "os_display_settings":    {"description": "Open display settings",       "execute": lambda a: _popen("start ms-settings:display")},
-    "os_sound_settings":      {"description": "Open sound settings",         "execute": lambda a: _popen("start ms-settings:sound")},
-    "os_firewall_settings":   {"description": "Open firewall settings",      "execute": lambda a: _popen("start ms-settings:windowsdefender")},
-    "os_apps_settings":       {"description": "Open apps & features",        "execute": lambda a: _popen("start ms-settings:appsfeatures")},
-    "os_bluetooth_settings":  {"description": "Open Bluetooth settings",     "execute": lambda a: _popen("start ms-settings:bluetooth")},
-    "os_network_settings":    {"description": "Open network settings",       "execute": lambda a: _popen("start ms-settings:network")},
-    "os_personalization":     {"description": "Open personalization",        "execute": lambda a: _popen("start ms-settings:personalization")},
-    "os_privacy_settings":    {"description": "Open privacy settings",       "execute": lambda a: _popen("start ms-settings:privacy")},
-    "os_magnifier":           {"description": "Open magnifier",              "execute": lambda a: _popen("magnify")},
-    "os_on_screen_keyboard":  {"description": "Open on-screen keyboard",     "execute": lambda a: _popen("osk")},
-    "os_character_map":       {"description": "Open character map",          "execute": lambda a: _popen("charmap")},
-    "os_disk_cleanup":        {"description": "Open disk cleanup",           "execute": lambda a: _popen("cleanmgr")},
-    "os_defrag":              {"description": "Open disk defragment",        "execute": lambda a: _popen("dfrgui")},
-    "os_resource_monitor":    {"description": "Open resource monitor",       "execute": lambda a: _popen("resmon")},
-    "os_performance_monitor": {"description": "Open performance monitor",    "execute": lambda a: _popen("perfmon")},
-    "os_remote_desktop":      {"description": "Open remote desktop client",  "execute": lambda a: _popen("mstsc")},
-    "os_snipping_tool":       {"description": "Open snipping tool",          "execute": lambda a: _popen("snippingtool")},
-    "os_narrator":            {"description": "Toggle narrator",             "execute": lambda a: _popen("narrator")},
-    "os_task_scheduler":      {"description": "Open task scheduler",         "execute": lambda a: _popen("taskschd.msc")},
-    "os_group_policy":        {"description": "Open group policy editor",    "execute": lambda a: _popen("gpedit.msc")},
-    "os_user_accounts":       {"description": "Open user accounts",          "execute": lambda a: _popen("netplwiz")},
-    "os_empty_recycle": {
-        "description": "Empty the recycle bin",
-        "execute": lambda a: _run("powershell Clear-RecycleBin -Force"),
-    },
-    "os_open_in_explorer": {
-        "description": "Open folder in File Explorer, args = [path]",
-        "execute": lambda a: _popen(f"explorer {a[0]}"),
-    },
-    "os_make_shortcut": {
-        "description": "Create a desktop shortcut, args = [target_path, shortcut_name]",
-        "execute": lambda a: _run(
-            f'powershell "$s=(New-Object -COM WScript.Shell).CreateShortcut(\'$env:USERPROFILE\\Desktop\\{a[1]}.lnk\');$s.TargetPath=\'{a[0]}\';$s.Save()"'
-        ),
-    },
-    "os_search_content": {
-        "description": "Search text inside files, args = [folder, search_text]",
-        "execute": lambda a: _run(f'findstr /r /s /i "{a[1]}" "{a[0]}\\*"'),
-    },
+    "os_sfc_scan":            {"description": "Run system file checker", "execute": lambda a: subprocess.run(["sfc", "/scannow"], capture_output=True, text=True)},
+    "os_chkdsk":              {"description": "Run chkdsk, args = [drive]", "execute": lambda a: subprocess.run(["chkdsk", a[0] if a else "C:"], capture_output=True, text=True)},
+    "os_windows_update":      {"description": "Open Windows Update", "execute": lambda a: _popen("start ms-settings:windowsupdate")},
+    "os_display_settings":    {"description": "Open display settings", "execute": lambda a: _popen("start ms-settings:display")},
+    "os_sound_settings":      {"description": "Open sound settings", "execute": lambda a: _popen("start ms-settings:sound")},
+    "os_firewall_settings":   {"description": "Open firewall settings", "execute": lambda a: _popen("start ms-settings:windowsdefender")},
+    "os_apps_settings":       {"description": "Open apps & features", "execute": lambda a: _popen("start ms-settings:appsfeatures")},
+    "os_bluetooth_settings":  {"description": "Open Bluetooth settings", "execute": lambda a: _popen("start ms-settings:bluetooth")},
+    "os_network_settings":    {"description": "Open network settings", "execute": lambda a: _popen("start ms-settings:network")},
+    "os_personalization":     {"description": "Open personalization", "execute": lambda a: _popen("start ms-settings:personalization")},
+    "os_privacy_settings":    {"description": "Open privacy settings", "execute": lambda a: _popen("start ms-settings:privacy")},
+    "os_magnifier":           {"description": "Open magnifier", "execute": lambda a: _popen("magnify")},
+    "os_on_screen_keyboard":  {"description": "Open on-screen keyboard", "execute": lambda a: _popen("osk")},
+    "os_character_map":       {"description": "Open character map", "execute": lambda a: _popen("charmap")},
+    "os_disk_cleanup":        {"description": "Open disk cleanup", "execute": lambda a: _popen("cleanmgr")},
+    "os_defrag":              {"description": "Open disk defragment", "execute": lambda a: _popen("dfrgui")},
+    "os_resource_monitor":    {"description": "Open resource monitor", "execute": lambda a: _popen("resmon")},
+    "os_performance_monitor": {"description": "Open performance monitor", "execute": lambda a: _popen("perfmon")},
+    "os_remote_desktop":      {"description": "Open remote desktop client", "execute": lambda a: _popen("mstsc")},
+    "os_snipping_tool":       {"description": "Open snipping tool", "execute": lambda a: _popen("snippingtool")},
+    "os_narrator":            {"description": "Toggle narrator", "execute": lambda a: _popen("narrator")},
+    "os_task_scheduler":      {"description": "Open task scheduler", "execute": lambda a: _popen("taskschd.msc")},
+    "os_group_policy":        {"description": "Open group policy editor", "execute": lambda a: _popen("gpedit.msc")},
+    "os_user_accounts":       {"description": "Open user accounts", "execute": lambda a: _popen("netplwiz")},
+    "os_empty_recycle":       {"description": "Empty recycle bin", "execute": lambda a: _run("powershell Clear-RecycleBin -Force")},
+    "os_open_in_explorer":    {"description": "Open folder in explorer, args = [path]", "execute": lambda a: _popen(f"explorer {a[0]}")},
+    "os_make_shortcut":       {"description": "Create desktop shortcut, args = [target, name]", "execute": lambda a: _run(f'powershell "$s=(New-Object -COM WScript.Shell).CreateShortcut(\'$env:USERPROFILE\\Desktop\\{a[1]}.lnk\');$s.TargetPath=\'{a[0]}\';$s.Save()"')},
+    "os_search_content":      {"description": "Search text inside files, args = [folder, search_text]", "execute": lambda a: _run(f'findstr /r /s /i "{a[1]}" "{a[0]}\\*"')},
 }

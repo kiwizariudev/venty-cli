@@ -1,13 +1,8 @@
-"""
-actions/encode.py — base64, md5, sha256 encoding/hashing
-"""
 import base64
 import hashlib
 
-
 def _stdout(text):
     return type("R", (), {"stdout": str(text)})()
-
 
 ACTIONS = {
     "os_base64_encode": {

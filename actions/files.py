@@ -1,6 +1,3 @@
-"""
-actions/files.py — file and folder operations
-"""
 import os
 import shutil
 import glob
@@ -8,10 +5,8 @@ import zipfile
 import hashlib
 import datetime
 
-
 def _stdout(text):
     return type("R", (), {"stdout": str(text)})()
-
 
 def _file_hash(path: str, algo: str = "sha256") -> str:
     h = hashlib.new(algo)
@@ -19,7 +14,6 @@ def _file_hash(path: str, algo: str = "sha256") -> str:
         for chunk in iter(lambda: f.read(8192), b""):
             h.update(chunk)
     return h.hexdigest()
-
 
 ACTIONS = {
     "os_create_file": {
@@ -165,7 +159,6 @@ ACTIONS = {
     },
 }
 
-
 def _build_tree(path: str, prefix: str = "", max_depth: int = 4, depth: int = 0) -> str:
     if depth > max_depth or not os.path.isdir(path):
         return ""
@@ -179,7 +172,6 @@ def _build_tree(path: str, prefix: str = "", max_depth: int = 4, depth: int = 0)
         else:
             lines.append(prefix + connector + entry.name)
     return "\n".join(lines)
-
 
 def _find_dupes(folder: str) -> str:
     sizes: dict = {}
