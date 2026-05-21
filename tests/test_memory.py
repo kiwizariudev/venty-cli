@@ -14,9 +14,15 @@ def isolated_notes(tmp_path):
     original = mem_module.NOTES_PATH
     test_path = str(tmp_path / "notes.json")
     mem_module.NOTES_PATH = test_path
-    # also patch _save and _load to use the new path via closure
     yield test_path
     mem_module.NOTES_PATH = original
+    # clean up real notes.json after each test to prevent cross-test pollution
+    if os.path.exists(original):
+        try:
+            with open(original, "w") as f:
+                json.dump({"facts": [], "preferences": [], "projects": []}, f)
+        except Exception:
+            pass
 
 
 def test_remember_and_list(isolated_notes):
@@ -48,6 +54,7 @@ def test_clear_notes(isolated_notes):
 
 
 def test_memory_block_empty(isolated_notes):
+    mem_module.clear_notes()
     block = mem_module.get_memory_block()
     assert block == ""
 

@@ -135,22 +135,30 @@ BUILD FLOW
   python cli.py     →  Venty running
 
 
-WEB UI (bridge/)
-----------------
+WEB DASHBOARD (bridge/)
+-----------------------
 
-  cd bridge && npm start
+  cd bridge && npm start   (or ask Venty: bridge_start)
        |
        v
   Express server  http://localhost:7432
        |
-       +-- GET  /api/status    provider + model info
-       +-- GET  /api/config    settings (key masked)
-       +-- POST /api/config    update settings
-       +-- GET  /api/history   last 100 turns
-       +-- GET  /api/stats     action usage
-       +-- GET  /api/memory    saved notes
-       +-- GET  /api/logs      log file contents
-       +-- WS   /              real-time chat
+       +-- GET  /api/status       provider + model info
+       +-- GET  /api/config       settings (key masked)
+       +-- POST /api/config       update settings
+       +-- GET  /api/history      last 100 conversation turns
+       +-- GET  /api/stats        action usage statistics
+       +-- GET  /api/action-log   full action history
+       +-- GET  /api/memory       saved notes
+       +-- GET  /api/logs         log file contents (type + lines params)
+
+  Dashboard tabs:
+    Overview   — stats cards, top actions bar chart, recent logs
+    Logs       — venty.log / errors.log / sessions.log with auto-refresh
+    Actions    — filterable action history table
+    Memory     — saved notes by category
+    History    — conversation history
+    Config     — live config editor with save
 
 
 C++ ENGINE (engine/)

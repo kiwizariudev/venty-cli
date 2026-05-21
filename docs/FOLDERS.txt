@@ -90,9 +90,12 @@ SOURCE (versioned)
   assets/             Static assets
     banner.txt        ASCII banner
 
-  tests/              Test suite
-    test_agent.py     LLM agent tests
-    test_jsonutil.py  JSON extraction tests
+  tests/              Test suite (36 tests, all passing)
+    test_actions.py   Action loading, execution, categories
+    test_agent.py     LLM agent + retry logic
+    test_config.py    Config load/save, paths
+    test_jsonutil.py  JSON extraction from LLM responses
+    test_memory.py    Notes CRUD, memory block generation
 
 DATA (mutable — gitignored)
 ----------------------------
