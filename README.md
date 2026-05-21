@@ -1,3 +1,5 @@
+![Venty Showcase](venty.gif)
+![Venty CLI Screenshot](screenshot.png)
 <p align="center">
   <strong>Venty</strong> — AI desktop assistant<br/>
   Control your computer from natural language.
@@ -293,5 +295,3 @@ Logs: `data/logs/venty.log` · `data/logs/errors.log`
 MIT
 
 ---
-
-![Venty CLI Screenshot](screenshot.png)
