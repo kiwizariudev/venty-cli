@@ -115,6 +115,9 @@ DEFAULT_CONFIG = {
     "confirm_dangerous":   True,
     "working_dir":         os.path.join(BASE_DIR, "data", "sandbox"),
     "theme":               "default",
+    "enable_bridge":       True,
+    "bridge_port":         7432,
+    "stream":              True,
 }
 
 def load_config():
@@ -465,8 +468,6 @@ You have access to {len(ACTIONS)} actions:
 {rules}
 
 CANNOT DO:
-- Hacking or bypassing security
-- Accessing private data without permission
 - Anything illegal or harmful to others"""
 
 def _ask_streaming(messages, api_key, model, url):
@@ -860,6 +861,81 @@ def show_suggestions(suggestions):
     print(f"{Colors.GRAY}     type a number to select, or just keep typing{Colors.RESET}")
     return list(suggestions)
 
+
+# ── background services ───────────────────────────────────────────────────────
+_BRIDGE_PROC = None
+
+def _start_services():
+    global _BRIDGE_PROC
+    _start_bridge()
+    _check_engine()
+
+def _start_bridge():
+    global _BRIDGE_PROC
+    if not CONFIG.get("enable_bridge", True):
+        return
+
+    bridge_dir   = os.path.join(BASE_DIR, "bridge")
+    port         = CONFIG.get("bridge_port", 7432)
+
+    if not os.path.isdir(bridge_dir):
+        return
+
+    node_modules = os.path.join(bridge_dir, "node_modules")
+    dist_dir     = os.path.join(bridge_dir, "dist")
+
+    print(f"{Colors.GRAY}  bridge  ...{Colors.RESET}", end="", flush=True)
+
+    if not os.path.isdir(node_modules):
+        r = subprocess.run("npm install", shell=True, capture_output=True, cwd=bridge_dir)
+        if r.returncode != 0:
+            print(f" {Colors.YELLOW}npm install failed (node.js required){Colors.RESET}")
+            return
+
+    if not os.path.isdir(dist_dir):
+        r = subprocess.run("npm run build", shell=True, capture_output=True, cwd=bridge_dir)
+        if r.returncode != 0:
+            print(f" {Colors.YELLOW}build failed{Colors.RESET}")
+            return
+
+    env = os.environ.copy()
+    env["VENTY_PORT"] = str(port)
+
+    try:
+        _BRIDGE_PROC = subprocess.Popen(
+            "npm start",
+            shell=True,
+            cwd=bridge_dir,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=env,
+        )
+        time.sleep(1.2)
+        try:
+            requests.get(f"http://localhost:{port}/api/status", timeout=2)
+            print(f" {Colors.GREEN}running  →  http://localhost:{port}{Colors.RESET}")
+        except Exception:
+            print(f" {Colors.YELLOW}starting  →  http://localhost:{port}{Colors.RESET}")
+    except Exception as e:
+        print(f" {Colors.YELLOW}could not start ({e}){Colors.RESET}")
+
+def _check_engine():
+    engine_exe = os.path.join(BASE_DIR, "engine",
+                              "venty_engine.exe" if os.name == "nt" else "venty_engine")
+    print(f"{Colors.GRAY}  engine  ...{Colors.RESET}", end="", flush=True)
+    if os.path.isfile(engine_exe):
+        print(f" {Colors.GREEN}ready{Colors.RESET}")
+    else:
+        print(f" {Colors.YELLOW}not built  →  run: engine_build_action{Colors.RESET}")
+
+def _stop_services():
+    global _BRIDGE_PROC
+    if _BRIDGE_PROC and _BRIDGE_PROC.poll() is None:
+        try:
+            _BRIDGE_PROC.terminate()
+        except Exception:
+            pass
+
 def main():
     if os.name == "nt":
         os.system("cls")
@@ -878,6 +954,9 @@ def main():
     print(f"{Colors.GRAY}  {now}{Colors.RESET}")
     print(f"{Colors.GRAY}  {len(ACTIONS)} actions available  •  type 'help' for commands{Colors.RESET}\n")
     print_separator()
+
+    _start_services()
+
     print(f" {Colors.CYAN}{CONFIG.get('display_name') or CONFIG.get('model', 'Venty')} · auto {Colors.RESET}                                                                    {Colors.GRAY}{os.getcwd()}{Colors.RESET}\n")
     print(f"  {Colors.BOLD}ask a question or describe a task ↵{Colors.RESET}")
     print_separator()
@@ -913,6 +992,7 @@ def main():
         except:
             save_history(conversation_history)
             if _HAS_CORE: log_session_end(len(conversation_history) // 2, session_actions)
+            _stop_services()
             print_venty("goodbye")
             break
         if not user_input: continue
@@ -920,6 +1000,7 @@ def main():
         if user_input.lower() in ["exit", "quit", "bye"]:
             save_history(conversation_history)
             if _HAS_CORE: log_session_end(len(conversation_history) // 2, session_actions)
+            _stop_services()
             print_venty("goodbye")
             break
         if user_input.lower() == "clear":

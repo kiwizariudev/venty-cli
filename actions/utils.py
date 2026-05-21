@@ -75,3 +75,52 @@ ACTIONS = {
         "execute": unzip_file,
     },
 }
+
+import subprocess
+import platform
+
+BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BRIDGE_DIR  = os.path.join(BASE_DIR, "bridge")
+ENGINE_DIR  = os.path.join(BASE_DIR, "engine")
+
+def _run(cmd, cwd=None):
+    return subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=cwd)
+
+def _popen(cmd, cwd=None):
+    return subprocess.Popen(cmd, shell=True, cwd=cwd)
+
+ACTIONS.update({
+    "bridge_install": {
+        "description": "Install bridge dependencies (npm install)",
+        "execute": lambda a: _run("npm install", cwd=BRIDGE_DIR),
+    },
+    "bridge_build": {
+        "description": "Build the TypeScript bridge (npm run build)",
+        "execute": lambda a: _run("npm run build", cwd=BRIDGE_DIR),
+    },
+    "bridge_start": {
+        "description": "Start the Venty web UI bridge server",
+        "execute": lambda a: [
+            _popen("npm start", cwd=BRIDGE_DIR),
+            _stdout(f"Bridge starting at http://localhost:7432 — open in browser"),
+        ][-1],
+    },
+    "bridge_dev": {
+        "description": "Start bridge in dev mode (ts-node, hot reload)",
+        "execute": lambda a: [
+            _popen("npm run dev", cwd=BRIDGE_DIR),
+            _stdout("Bridge dev server starting at http://localhost:7432"),
+        ][-1],
+    },
+    "bridge_open": {
+        "description": "Open the Venty web UI in the default browser",
+        "execute": lambda a: _popen("start http://localhost:7432" if platform.system() == "Windows" else "open http://localhost:7432"),
+    },
+    "engine_build_action": {
+        "description": "Build the C++ venty_engine binary",
+        "execute": lambda a: _run(
+            "build.bat" if platform.system() == "Windows" else "bash build.sh",
+            cwd=ENGINE_DIR,
+        ),
+    },
+})

@@ -112,25 +112,37 @@ def print_banner(provider: str = "", model: str = "not configured") -> None:
     c = vc()
     name = model if model and model != "not configured" else "not configured"
     prov = provider if provider else "Venty"
+
     pet = [
-        f"  {c} /\\_/\\  ",
-        f"  {c}( o.o ) ",
-        f"  {c} > ^ <  ",
+        f"  {c} /\\_/\\  {RESET}",
+        f"  {c}( o.o ) {RESET}",
+        f"  {c} > ^ <  {RESET}",
+        f"  {c}  ~~~   {RESET}",
+        f"          ",
+        f"          ",
     ]
     logo = [
-        f"{c}{BOLD} ██╗   ██╗███████╗███╗   ██╗████████╗██╗   ██╗",
-        f"{c}{BOLD} ██║   ██║██╔════╝████╗  ██║╚══██╔══╝╚██╗ ██╔╝",
-        f"{c}{BOLD} ██║   ██║█████╗  ██╔██╗ ██║   ██║    ╚████╔╝ ",
-        f"{c}{BOLD} ╚██╗ ██╔╝██╔══╝  ██║╚██╗██║   ██║     ╚██╔╝  ",
-        f"{c}{BOLD}  ╚████╔╝ ███████╗██║ ╚████║   ██║      ██║   ",
-        f"{c}{BOLD}   ╚═══╝  ╚══════╝╚═╝  ╚═══╝   ╚═╝      ╚═╝  ",
+        f"{c}{BOLD}██╗   ██╗███████╗███╗   ██╗████████╗██╗   ██╗{RESET}",
+        f"{c}{BOLD}██║   ██║██╔════╝████╗  ██║╚══██╔══╝╚██╗ ██╔╝{RESET}",
+        f"{c}{BOLD}██║   ██║█████╗  ██╔██╗ ██║   ██║    ╚████╔╝ {RESET}",
+        f"{c}{BOLD}╚██╗ ██╔╝██╔══╝  ██║╚██╗██║   ██║     ╚██╔╝  {RESET}",
+        f"{c}{BOLD} ╚████╔╝ ███████╗██║ ╚████║   ██║      ██║   {RESET}",
+        f"{c}{BOLD}  ╚═══╝  ╚══════╝╚═╝  ╚═══╝   ╚═╝      ╚═╝  {RESET}",
     ]
     print()
-    for i, line in enumerate(logo):
-        side = pet[i] if i < len(pet) else "          "
-        print(f"{side}{line}{RESET}")
-    print(f"\n{_THEME['info']}  ┌──────────────────────────────────────────────────┐")
-    print(f"  │  AI Desktop Assistant                            │")
-    print(f"  │  Provider : {prov:<38}│")
-    print(f"  │  Model    : {name:<38}│")
-    print(f"  └──────────────────────────────────────────────────┘{RESET}")
+    for i in range(len(logo)):
+        print(f"{pet[i]}{logo[i]}")
+
+    W = 50  # inner width (between │ and │)
+    def box_row(text):
+        # text is the visible content, pad to exactly W chars
+        visible = text
+        pad = W - len(visible)
+        return f"  {_THEME['info']}│{RESET}{visible}{' ' * max(0, pad)}{_THEME['info']}│{RESET}"
+
+    print(f"\n  {_THEME['info']}┌{'─' * W}┐{RESET}")
+    print(box_row(f"  AI Desktop Assistant"))
+    print(box_row(f""))
+    print(box_row(f"  Provider : {prov}"))
+    print(box_row(f"  Model    : {name}"))
+    print(f"  {_THEME['info']}└{'─' * W}┘{RESET}")

@@ -1,18 +1,25 @@
 import os
 import json
 import datetime
-from core.paths import NOTES_PATH, MEMORY_DIR
 
-os.makedirs(MEMORY_DIR, exist_ok=True)
+BASE_DIR   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+NOTES_PATH = os.path.join(BASE_DIR, "data", "memory", "notes.json")
 
 _SCHEMA = {"facts": [], "preferences": [], "projects": []}
 
+
+def _get_path() -> str:
+    import core.memory
+    return core.memory.NOTES_PATH
+
+
 def _load() -> dict:
-    if not os.path.exists(NOTES_PATH):
+    path = _get_path()
+    if not os.path.exists(path):
         _save(_SCHEMA.copy())
         return _SCHEMA.copy()
     try:
-        with open(NOTES_PATH, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
         for k in _SCHEMA:
             if k not in data:
@@ -21,10 +28,13 @@ def _load() -> dict:
     except Exception:
         return _SCHEMA.copy()
 
+
 def _save(data: dict) -> None:
-    os.makedirs(os.path.dirname(NOTES_PATH), exist_ok=True)
-    with open(NOTES_PATH, "w", encoding="utf-8") as f:
+    path = _get_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+
 
 def remember(text: str, category: str = "facts") -> str:
     data = _load()
@@ -34,6 +44,7 @@ def remember(text: str, category: str = "facts") -> str:
     data[category].append(entry)
     _save(data)
     return f"Remembered: {text}"
+
 
 def forget(text: str) -> str:
     data = _load()
@@ -45,6 +56,7 @@ def forget(text: str) -> str:
     _save(data)
     return f"Removed {removed} note(s) matching '{text}'"
 
+
 def list_notes() -> str:
     data = _load()
     lines = []
@@ -55,9 +67,11 @@ def list_notes() -> str:
                 lines.append(f"  • {e['text']}  ({e.get('added', '')})")
     return "\n".join(lines) if lines else "No notes saved yet."
 
+
 def clear_notes() -> str:
     _save(_SCHEMA.copy())
     return "All notes cleared."
+
 
 def get_memory_block() -> str:
     data = _load()

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Venty Dashboard</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <div id="brand">
+        <pre class="logo"> /\_/\
+( o.o )
+ &gt; ^ &lt;</pre>
+        <div>
+          <span class="brand-name">Venty</span>
+          <span class="brand-sub">Dashboard</span>
+        </div>
+      </div>
+      <div id="topbar-right">
+        <span id="status-dot" class="dot offline"></span>
+        <span id="status-text">connecting...</span>
+        <span id="model-badge"></span>
+        <button id="refresh-all" title="Refresh all">↻</button>
+      </div>
+    </header>
+
+    <nav id="tabs">
+      <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="logs">Logs</button>
+      <button class="tab-btn" data-tab="actions">Actions</button>
+      <button class="tab-btn" data-tab="memory">Memory</button>
+      <button class="tab-btn" data-tab="history">History</button>
+      <button class="tab-btn" data-tab="config">Config</button>
+    </nav>
+
+    <main id="content">
+
+      <!-- OVERVIEW -->
+      <section id="tab-overview" class="tab active">
+        <div class="grid-3">
+          <div class="card" id="card-total">
+            <div class="card-label">Total Actions</div>
+            <div class="card-value" id="stat-total">—</div>
+          </div>
+          <div class="card success">
+            <div class="card-label">Succeeded</div>
+            <div class="card-value" id="stat-success">—</div>
+          </div>
+          <div class="card error">
+            <div class="card-label">Failed</div>
+            <div class="card-value" id="stat-failed">—</div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-title">Top Actions</div>
+            <div id="top-actions"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Recent Errors</div>
+            <pre id="recent-errors" class="log-pre"></pre>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Recent Activity</div>
+          <pre id="recent-log" class="log-pre"></pre>
+        </div>
+      </section>
+
+      <!-- LOGS -->
+      <section id="tab-logs" class="tab">
+        <div class="toolbar">
+          <select id="log-type">
+            <option value="venty">venty.log</option>
+            <option value="errors">errors.log</option>
+            <option value="sessions">sessions.log</option>
+          </select>
+          <select id="log-lines">
+            <option value="50">50 lines</option>
+            <option value="100" selected>100 lines</option>
+            <option value="200">200 lines</option>
+            <option value="500">500 lines</option>
+          </select>
+          <button id="refresh-logs">Refresh</button>
+          <button id="clear-log-view">Clear view</button>
+          <label class="toggle-label">
+            <input type="checkbox" id="auto-refresh-logs"/> Auto-refresh
+          </label>
+        </div>
+        <pre id="log-output" class="log-pre full"></pre>
+      </section>
+
+      <!-- ACTIONS HISTORY -->
+      <section id="tab-actions" class="tab">
+        <div class="toolbar">
+          <input id="action-filter" type="text" placeholder="Filter by action name..."/>
+          <select id="action-status-filter">
+            <option value="all">All</option>
+            <option value="success">Success</option>
+            <option value="failed">Failed</option>
+          </select>
+          <button id="refresh-actions">Refresh</button>
+        </div>
+        <div id="actions-table-wrap">
+          <table id="actions-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Action</th>
+                <th>Args</th>
+                <th>Status</th>
+                <th>Output</th>
+              </tr>
+            </thead>
+            <tbody id="actions-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- MEMORY -->
+      <section id="tab-memory" class="tab">
+        <div class="toolbar">
+          <button id="refresh-memory">Refresh</button>
+        </div>
+        <div id="memory-content"></div>
+      </section>
+
+      <!-- HISTORY -->
+      <section id="tab-history" class="tab">
+        <div class="toolbar">
+          <input id="history-filter" type="text" placeholder="Search history..."/>
+          <button id="refresh-history">Refresh</button>
+        </div>
+        <div id="history-list"></div>
+      </section>
+
+      <!-- CONFIG -->
+      <section id="tab-config" class="tab">
+        <div class="toolbar">
+          <button id="refresh-config">Refresh</button>
+          <button id="save-config" class="btn-success">Save Changes</button>
+        </div>
+        <div id="config-grid"></div>
+      </section>
+
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

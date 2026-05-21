@@ -1,51 +1,116 @@
 VENTY — FOLDER ORGANIZATION
 ===========================
 
-SOURCE (read-only in git — edit to change behavior)
--------------------------------------------------
-  core/           Engine: LLM, JSON, executor, memory, scheduler
-  actions/        200+ system actions
-  ui/             Terminal UI helpers
-  cli.py          Main entry point
-  setup.py        Setup wizard + build
+SOURCE (versioned)
+------------------
+  cli.py              Main entry point — run this
+  setup.py            Setup wizard (API keys, build)
+  config.py           Rich config management UI
+  requirements.txt    Python dependencies
 
-DATA (mutable — gitignored except .gitkeep)
--------------------------------------------
+  core/               Engine
+    agent.py          LLM communication + streaming
+    executor.py       Action execution + path resolution
+    tasks.py          Multi-step task runner
+    memory.py         Persistent notes (notes.json)
+    scheduler.py      Delayed / repeating jobs
+    plugins.py        Plugin loader
+    prompt.py         System prompt builder (cloud + local)
+    paths.py          All path constants
+    jsonutil.py       Robust JSON extraction
+    native.py         C++ engine bridge
+    aliases.py        Command aliases
+    history.py        Conversation history
+    plugin_sdk.py     Helpers for writing plugins
+    context.py        Live context injection (cwd, time, OS)
+    config.py         Config loader/saver
+    logger.py         Centralised logging
+
+  actions/            437+ built-in actions
+    files.py          File & folder operations
+    compile.py        gcc, g++, python, node, java, npm, pip
+    git.py            Git operations
+    network.py        Ping, wifi, DNS, download
+    browser.py        Chrome, Edge, Firefox, URL open
+    web.py            DuckDuckGo search, fetch, HTTP
+    system.py         CPU, RAM, GPU, disk, env vars, time
+    windows.py        Windows UI, settings panels
+    power.py          Shutdown, restart, sleep, volume
+    registry.py       Windows registry
+    clipboard.py      Clipboard read/write/clear
+    encode.py         Base64, md5, sha256, sha1
+    crossplatform.py  xp_* — Windows + macOS + Linux
+    config_actions.py cfg_* — change config at runtime
+    docker.py         Docker + docker-compose
+    languages.py      Rust, Go, Deno, TypeScript, .NET, PHP, Ruby, Lua, Swift, Kotlin, R, Perl
+    ssh.py            SSH, SCP, rsync
+    pkgmanagers.py    winget, choco, brew, apt, scoop
+    utils.py          HTTP server, JSON format, bridge/engine launchers
+    control.py        loop_start, none, cannot_do
+
+  ui/
+    colors.py         ANSI colors, banner (with cat), print helpers
+    commands.py       CLI command handlers
+
+  bridge/             TypeScript web UI
+    src/server.ts     Express + WebSocket server
+    public/           HTML + CSS + JS frontend
+    package.json      Node dependencies
+    tsconfig.json     TypeScript config
+    start.bat/.sh     Quick start scripts
+
+  engine/             C++ native component
+    venty_engine.cpp  Fast file ops, SHA-256, tree, line count
+    build.bat         Windows build script
+    build.sh          Linux/macOS build script
+
+  extensions/         Optional add-ons
+    plugins/          Drop .py files here to add actions
+      dev_tools.py    pytest, mypy, black, flake8, venv
+      dev_pack.py     Dev workflow helpers
+      media.py        Play/pause, brightness, volume
+      system_info.py  Full sysinfo, drives, user
+      quicknotes.py   Lightweight note-taking
+      webaddons.py    Browser shortcuts
+      clipboard_plus.py  Clipboard history
+      fun_pack.py     Fun actions
+      _template.py    Starter template
+    modules/          Helper modules
+    api/              (reserved)
+
+  scripts/            Convenience launchers
+    run.bat           Windows: python cli.py
+    run.ps1           PowerShell: python cli.py
+    setup.bat         Windows: python setup.py
+
+  docs/               Documentation
+    LAYOUT.txt        Data flow + architecture
+    FOLDERS.txt       This file
+
+  assets/             Static assets
+    banner.txt        ASCII banner
+
+  tests/              Test suite
+    test_agent.py     LLM agent tests
+    test_jsonutil.py  JSON extraction tests
+
+DATA (mutable — gitignored)
+----------------------------
   data/
-    config/       settings.json, apis.json, themes, aliases
-    sandbox/      AI workspace (default working_dir)
-    runtime/      temp builds / compile output
-    cache/        action statistics
-    memory/       chat history + notes
-    logs/         venty.log, errors.log
-    scheduler/    jobs.json
+    config/           settings.json, apis.json, themes.json, aliases.json, keybinds.json
+    sandbox/          Default working_dir — AI-generated files go here
+    runtime/          Temp builds, compile output
+    cache/            actions.json (usage stats)
+    memory/           history.json, notes.json, quicknotes.json
+    logs/             venty.log, errors.log, sessions.log
+    scheduler/        jobs.json
 
-EXTENSIONS (optional add-ons)
------------------------------
-  extensions/
-    plugins/      *.py with ACTIONS dict (auto-loaded)
-    modules/      helper .py files
-    api/          (reserved) HTTP API
-    bridge/       (reserved) Discord / webhooks
-
-DOCS & ASSETS
--------------
-  docs/           LAYOUT.txt (flow), FOLDERS.txt (this file)
-  assets/         banner.txt
-  scripts/        run.bat, run.ps1, setup.bat
-
-BUILD OUTPUT
-------------
-  build/          PyInstaller intermediate
-  dist/           cli.exe
-  env/            local venv (optional)
-
-REMOVED / LEGACY (do not use)
------------------------------
-  config/         → migrated to data/config/
-  memory/         → data/memory/
-  logs/           → data/logs/
-  plugins/        → extensions/plugins/
-  cli/            → use scripts/ instead
-  modules/        → extensions/modules/
-  engine/         → removed (use core/)
+BUILD OUTPUT (gitignored)
+--------------------------
+  build/              PyInstaller intermediate files
+  dist/               cli.exe (packaged binary)
+  env/                Local Python venv
+  bridge/node_modules/ Node.js dependencies
+  bridge/dist/        Compiled TypeScript
+  engine/venty_engine[.exe]  Compiled C++ binary
+  __pycache__/        Python bytecode

@@ -2,6 +2,10 @@ import os
 import importlib.util
 import sys
 
+import os
+import importlib.util
+import sys
+
 from actions.files          import ACTIONS as _FILES
 from actions.process        import ACTIONS as _PROCESS
 from actions.compile        import ACTIONS as _COMPILE
@@ -19,22 +23,21 @@ from actions.control        import ACTIONS as _CONTROL
 from actions.utils          import ACTIONS as _UTILS
 from actions.crossplatform  import ACTIONS as _CROSSPLATFORM
 from actions.config_actions import ACTIONS as _CONFIG_ACTIONS
+from actions.docker         import ACTIONS as _DOCKER
+from actions.languages      import ACTIONS as _LANGUAGES
+from actions.ssh            import ACTIONS as _SSH
+from actions.pkgmanagers    import ACTIONS as _PKGMANAGERS
+
+try:
+    from core.native import ACTIONS as _NATIVE
+except Exception:
+    _NATIVE = {}
 
 ACTIONS: dict = {}
-ACTIONS.update(_FILES)
-ACTIONS.update(_PROCESS)
-ACTIONS.update(_COMPILE)
-ACTIONS.update(_GIT)
-ACTIONS.update(_NETWORK)
-ACTIONS.update(_SYSTEM)
-ACTIONS.update(_POWER)
-ACTIONS.update(_WINDOWS)
-ACTIONS.update(_REGISTRY)
-ACTIONS.update(_CLIPBOARD)
-ACTIONS.update(_ENCODE)
-ACTIONS.update(_WEB)
-ACTIONS.update(_BROWSER)
-ACTIONS.update(_CONTROL)
-ACTIONS.update(_UTILS)
-ACTIONS.update(_CROSSPLATFORM)
-ACTIONS.update(_CONFIG_ACTIONS)
+for _src in [
+    _FILES, _PROCESS, _COMPILE, _GIT, _NETWORK, _SYSTEM, _POWER,
+    _WINDOWS, _REGISTRY, _CLIPBOARD, _ENCODE, _WEB, _BROWSER,
+    _CONTROL, _UTILS, _CROSSPLATFORM, _CONFIG_ACTIONS,
+    _DOCKER, _LANGUAGES, _SSH, _PKGMANAGERS, _NATIVE,
+]:
+    ACTIONS.update(_src)

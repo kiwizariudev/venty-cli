@@ -1,119 +1,175 @@
-VENTY / REFLECT — PROJECT LAYOUT
-=================================
+VENTY — PROJECT LAYOUT & DATA FLOW
+===================================
 
-  USER (terminal)
-       |
-       v
-  +----------+
-  |  cli.py  |  main entry — prompt loop, builtins (help, config, …)
-  +----------+
-       |
-       +------------------+------------------+------------------+
-       v                  v                  v                  v
-  +----------+      +-----------+      +-----------+      +-----------+
-  | core/    |      | actions/  |      | ui/       |      | plugins/  |
-  | engine   |      | 200+ ops  |      | colors    |      | optional  |
-  +----------+      +-----------+      +-----------+      +-----------+
-       |                  |
-       |                  +--> os_write_file, os_open_chrome, os_run_python, …
-       v
-  +----------+     HTTPS POST (stream)      +---------------------------+
-  | agent    | --------------------------> | LLM API (Groq / Mistral /  |
-  | prompt   | <-------------------------- | OpenAI / LM Studio local)  |
-  | jsonutil |     JSON response           +---------------------------+
-  | tasks    |           |
-  | executor |           v
-  +----------+     {"action":"...", "args":[...], "message":"..."}
-       |                  |
-       |                  +--> action = "task_plan" ?
-       |                           |
-       |                           v
-       |                    +-------------+
-       |                    | tasks.py    |  multi-step loop
-       |                    +-------------+
-       |                           |
-       v                           v
-  +----------+              execute_action()
-  | executor | ------------------+
-  +----------+                   v
-                          subprocess / files / browser
-
-
-FOLDER MAP
-----------
-
-  reflect/
-  |
-  |-- cli.py              <-- run this (or scripts/run.bat)
-  |-- setup.py            <-- configure API + build
-  |
-  |-- data/               ALL mutable state
-  |     config/           settings, API keys  [gitignored]
-  |     sandbox/          default working_dir
-  |     runtime/          temp / compile scratch
-  |     cache/            action stats
-  |     memory/           history + notes
-  |     logs/             venty.log, errors.log
-  |     scheduler/        jobs.json
-  |
-  |-- extensions/
-  |     plugins/          custom ACTIONS/*.py (auto-loaded)
-  |     modules/          optional helpers
-  |     api/              (reserved)
-  |     bridge/           (reserved)
-  |
-  |-- core/               brain (agent, executor, tasks, …)
-  |-- actions/            hands
-  |-- ui/                 terminal styling
-  |-- scripts/            run.bat, run.ps1
-  |-- docs/               LAYOUT.txt, FOLDERS.txt
-  |-- assets/             banner.txt
-
-  See docs/FOLDERS.txt for full organization.
+  USER (terminal or web browser)
+         |
+         +---------------------------+
+         |                           |
+         v                           v
+    +----------+              +-------------+
+    |  cli.py  |              | bridge/     |
+    |  REPL    |              | TypeScript  |
+    +----------+              | Express+WS  |
+         |                    +-------------+
+         |                           |
+         +---------------------------+
+         v
+  +------------------+
+  | core/            |
+  |  agent.py        |  LLM communication + streaming
+  |  prompt.py       |  system prompt builder
+  |  executor.py     |  action execution + path resolution
+  |  tasks.py        |  multi-step task runner
+  |  memory.py       |  persistent notes
+  |  scheduler.py    |  delayed / repeating jobs
+  |  plugins.py      |  plugin loader
+  |  jsonutil.py     |  robust JSON extraction
+  |  native.py       |  C++ engine bridge
+  +------------------+
+         |
+         v
+  +------------------+     HTTPS POST (streaming SSE)     +---------------------------+
+  |  agent.ask()     | ---------------------------------> | LLM API                   |
+  |                  | <--------------------------------- | Groq / Mistral / OpenAI   |
+  +------------------+     JSON response                  | LM Studio (local)         |
+         |                                                +---------------------------+
+         v
+  {"action":"...", "args":[...], "message":"...", "suggestions":[...]}
+         |
+         +-- action == "task_plan" ?
+         |         |
+         |         v
+         |   +-------------+
+         |   | tasks.py    |  multi-step loop with progress bar
+         |   +-------------+
+         |         |
+         v         v
+  +------------------+
+  | executor.py      |  execute_action(name, args)
+  +------------------+
+         |
+         v
+  +------------------+     +------------------+     +------------------+
+  | actions/         |     | extensions/      |     | engine/          |
+  |  files.py        |     |  plugins/        |     |  venty_engine    |
+  |  compile.py      |     |  dev_tools.py    |     |  (C++ binary)    |
+  |  docker.py       |     |  media.py        |     |  fast file ops   |
+  |  languages.py    |     |  system_info.py  |     |  SHA-256, tree   |
+  |  ssh.py          |     |  quicknotes.py   |     |  line count      |
+  |  pkgmanagers.py  |     |  ...             |     +------------------+
+  |  crossplatform.py|     +------------------+
+  |  config_actions.py
+  |  ... (437+ total)|
+  +------------------+
+         |
+         v
+    subprocess / filesystem / OS
 
 
 DATA FLOW (one message)
 -----------------------
 
-  you > "make hello.py with hello world"
+  you > "make hello.py with hello world and run it"
             |
             v
-      [build_system_prompt + history]
+      [build_system_prompt(ACTIONS, CONFIG) + memory + history]
             |
             v
-      POST api.../chat/completions  (Bearer API_KEY)
+      POST /v1/chat/completions  (Bearer API_KEY, stream=true)
             |
-            v
-      raw JSON string
+            v  (spinner while streaming)
+      raw JSON string assembled from SSE tokens
             |
             v
       extract_first_json()
             |
             +-- action: "task_plan"
             |       steps[0]: os_write_file ["hello.py", "print('hello world')"]
-            |       steps[1]: (optional) os_run_python
+            |       steps[1]: os_run_python  ["hello.py"]
+            |       suggestions: ["add error handling", "run again"]
             |
             v
-      run_task_plan() --> executor --> data/sandbox/hello.py
+      handle_task_plan()
+            |
+            +-- step 1: execute_action("os_write_file", [...])
+            |       → resolve_path("hello.py") → data/sandbox/hello.py
+            |       → open(path, "w").write(content)
+            |       → log_action(...)
+            |
+            +-- step 2: execute_action("os_run_python", [...])
+            |       → subprocess.run("python data/sandbox/hello.py")
+            |       → stdout captured + displayed
+            |
+            v
+      show_suggestions(["add error handling", "run again"])
+            |
+            v
+      user types "2" → "run again" selected automatically
+
+
+STARTUP SEQUENCE (python cli.py)
+---------------------------------
+
+  1. load_config()          read data/config/settings.json
+  2. apply_theme()          load ANSI color codes
+  3. load plugins           extensions/plugins/*.py → ACTIONS
+  4. print_banner()         cat + logo + provider/model box
+  5. check LLM connection   GET base_url (timeout 5s)
+  6. _start_bridge()        if enable_bridge: npm start in bridge/
+  7. _check_engine()        check engine/venty_engine[.exe] exists
+  8. REPL loop              input → ask_venty → execute → suggestions
 
 
 BUILD FLOW
 ----------
 
-  python setup.py  -->  menu
+  python setup.py  →  menu
        |
-       +-- [4] Build
+       +-- [4] Build & install
               |
               +-- pip install -r requirements.txt
-              +-- ensure_dirs()  (sandbox, runtime, cache, …)
-              +-- default config/settings.json if missing
+              +-- ensure_dirs()
+              +-- create default settings.json
               |
-       python cli.py  -->  Venty running
+  python config.py  →  config UI (themes, plugins, API, services)
+  python cli.py     →  Venty running
 
 
-PACKAGED EXE (optional)
------------------------
+WEB UI (bridge/)
+----------------
 
-  pip install pyinstaller
-  pyinstaller cli.spec
-       --> dist/cli.exe
+  cd bridge && npm start
+       |
+       v
+  Express server  http://localhost:7432
+       |
+       +-- GET  /api/status    provider + model info
+       +-- GET  /api/config    settings (key masked)
+       +-- POST /api/config    update settings
+       +-- GET  /api/history   last 100 turns
+       +-- GET  /api/stats     action usage
+       +-- GET  /api/memory    saved notes
+       +-- GET  /api/logs      log file contents
+       +-- WS   /              real-time chat
+
+
+C++ ENGINE (engine/)
+--------------------
+
+  cd engine && build.bat   (Windows)
+  cd engine && bash build.sh  (Linux/macOS)
+       |
+       v
+  venty_engine[.exe]
+       |
+       +-- stat   <path>           file/dir info
+       +-- hash   <path>           SHA-256
+       +-- count  <path> [ext]     file count
+       +-- lines  <path> [ext]     line count
+       +-- size   <path>           directory size
+       +-- find   <path> <pattern> find files
+       +-- newer  <path> <seconds> recently modified
+       +-- dupes  <path>           duplicate files
+       +-- tree   <path> [depth]   directory tree
+
+  Called from Python via core/native.py → engine_* actions
