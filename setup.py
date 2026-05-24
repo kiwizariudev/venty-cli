@@ -504,8 +504,9 @@ def build():
     info("creating folder structure...")
     print()
 
-    for name, desc in DIRS.items():
-        ok(f"{name:<12} {C.GRAY}{desc}{C.RESET}")
+    for path in DIRS:
+        name = os.path.basename(path)
+        ok(f"{name:<12} {C.GRAY}{path}{C.RESET}")
     info("data/ — config, sandbox, logs, memory, cache, runtime, scheduler")
     info("extensions/ — plugins, modules, api, bridge")
 
